@@ -1,0 +1,203 @@
+{
+  "name": "parakeetai-desktop",
+  "main": "./.erb/dll/main.bundle.dev.js",
+  "description": "ParakeetAI Desktop App",
+  "author": "ParakeetAI",
+  "scripts": {
+    "build": "concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:dll": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts",
+    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.prod.ts",
+    "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
+    "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
+    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
+    "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
+    "prestart": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
+    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer",
+    "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon . -- {@}\" --",
+    "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
+    "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts"
+  },
+  "browserslist": [
+    "defaults",
+    "electron >= 20"
+  ],
+  "prettier": {
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": [
+          ".prettierrc"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^1.2.12",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.7",
+    "@speechmatics/real-time-client": "^6.0.0",
+    "@tanstack/react-query": "^5.80.6",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron-debug": "^4.1.0",
+    "electron-log": "^5.4.0",
+    "electron-updater": "^6.6.2",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^0.513.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.6.2",
+    "screenshot-desktop": "^1.15.1",
+    "tailwind-merge": "^3.3.0",
+    "tw-animate-css": "^1.3.4"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.0",
+    "@svgr/webpack": "^8.1.0",
+    "@tailwindcss/postcss": "^4.1.7",
+    "@teamsupercell/typings-for-css-modules-loader": "^2.5.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6",
+    "@types/screenshot-desktop": "^1.12.3",
+    "@types/webpack-bundle-analyzer": "^4.7.0",
+    "autoprefixer": "^10.4.21",
+    "chalk": "^5.4.1",
+    "concurrently": "^9.1.2",
+    "core-js": "^3.43.0",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.2",
+    "css-minimizer-webpack-plugin": "^7.0.2",
+    "detect-port": "^2.1.0",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "electron-devtools-installer": "^4.0.0",
+    "electronmon": "^2.0.3",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.6.3",
+    "mini-css-extract-plugin": "^2.9.2",
+    "postcss": "^8.5.3",
+    "postcss-loader": "^8.1.1",
+    "prettier": "^3.5.3",
+    "react-refresh": "^0.17.0",
+    "rimraf": "^6.0.1",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^4.1.7",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
+    "typescript": "^5.8.2",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.98.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2",
+    "webpack-merge": "^6.0.1"
+  },
+  "build": {
+    "productName": "ParakeetAI",
+    "appId": "org.parakeetai.ParakeetAI",
+    "asar": true,
+    "asarUnpack": [
+      "**\\*.{node,dll}",
+      "**/node_modules/screenshot-desktop/**"
+    ],
+    "files": [
+      "dist",
+      "node_modules",
+      "package.json"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "JureSotosek",
+      "repo": "parakeetai-desktop-releases"
+    },
+    "protocols": [
+      {
+        "name": "ParakeetAI Protocol",
+        "schemes": [
+          "parakeetai"
+        ]
+      }
+    ],
+    "mac": {
+      "notarize": true,
+      "target": {
+        "target": "default",
+        "arch": [
+          "universal"
+        ]
+      },
+      "type": "distribution",
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "x64ArchFiles": "**/AudioTapModuleMac_universal"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": {
+        "target": "NSIS",
+        "arch": [
+          "x64",
+          "ia32",
+          "arm64"
+        ]
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
+    },
+    "directories": {
+      "app": "release/app",
+      "buildResources": "assets",
+      "output": "release/build"
+    },
+    "extraResources": [
+      "./assets/**"
+    ]
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=14.x",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": ">=7.x",
+      "onFail": "error"
+    }
+  },
+  "electronmon": {
+    "patterns": [
+      "!**/**",
+      "src/main/**",
+      ".erb/dll/**"
+    ],
+    "logLevel": "quiet"
+  }
+}
