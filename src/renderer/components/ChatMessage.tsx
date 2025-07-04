@@ -30,7 +30,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const markdownComponents: Components = useMemo(
     () => ({
       code: CodeBlock as Components['code'],
-      hr: () => <hr className=" mx-10 border-gray-700" />,
+      hr: () => <hr className="mx-10 border-gray-700" />,
       h1: ({ children }) => (
         <h1 className="mb-2 text-2xl font-semibold">{children}</h1>
       ),
@@ -47,13 +47,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       li: ({ children }) => <li className="mb-1">{children}</li>,
       // Blockquote support
       blockquote: ({ children }) => (
-        <blockquote className="my-2 border-l-4 border-gray-700 pl-4 text-gray-300 italic">
+        <blockquote className="my-1 border-l-4 border-gray-700 pl-4 text-gray-300 italic">
           {children}
         </blockquote>
       ),
       // Table support
       table: ({ children }) => (
-        <div className="my-2 overflow-x-auto">
+        <div className="my-1 overflow-x-auto">
           <table className="min-w-full border-collapse border border-gray-300">
             {children}
           </table>
@@ -74,7 +74,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       ),
       // Add image support with custom styling
       img: ({ src, alt, ...props }) => (
-        <div className="my-4 flex justify-center">
+        <div className="my-1 flex justify-center">
           <img
             src={src}
             alt={alt}
