@@ -13,6 +13,7 @@ export type Channels =
   | 'ipc-set-window-width'
   | 'ipc-toggle-hide'
   | 'ipc-answer-question'
+  | 'ipc-what-to-ask'
   | 'ipc-analyse-screen'
   | 'ipc-load-session'
   | 'ipc-move-window-left'

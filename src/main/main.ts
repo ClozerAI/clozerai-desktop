@@ -382,6 +382,12 @@ app.whenReady().then(async () => {
       }
     });
 
+    globalShortcut.register('Command+H', () => {
+      if (mainWindow) {
+        mainWindow.webContents.send('ipc-what-to-ask');
+      }
+    });
+
     globalShortcut.register('Command+K', () => {
       if (mainWindow) {
         mainWindow.webContents.send('ipc-analyse-screen');
@@ -416,6 +422,12 @@ app.whenReady().then(async () => {
     globalShortcut.register('Ctrl+G', () => {
       if (mainWindow) {
         mainWindow.webContents.send('ipc-answer-question');
+      }
+    });
+
+    globalShortcut.register('Ctrl+H', () => {
+      if (mainWindow) {
+        mainWindow.webContents.send('ipc-what-to-ask');
       }
     });
 

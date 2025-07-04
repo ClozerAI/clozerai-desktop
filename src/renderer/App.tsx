@@ -29,7 +29,10 @@ import { Tooltip, TooltipContent } from './components/ui/tooltip';
 import { TooltipTrigger } from './components/ui/tooltip';
 import { Input } from './components/ui/input';
 import useVersion from './lib/useVersion';
-import useSessionTranscription from './lib/useSessionTranscription';
+import useSessionTranscription, {
+  AI_HELP_PROMPT,
+  WHAT_TO_ASK_PROMPT,
+} from './lib/useSessionTranscription';
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 
 const isMac = window.electron?.platform === 'darwin';
@@ -149,12 +152,29 @@ export default function App() {
 
     const unsubscribeAnswerQuestion = window.electron.ipcRenderer.on(
       'ipc-answer-question',
-      () => handleGenerateResponse(),
+      () => {
+        if (activatedSession && combinedTranscript.length > 0) {
+          handleGenerateResponse(undefined, AI_HELP_PROMPT);
+        }
+      },
+    );
+
+    const unsubscribeWhatToAsk = window.electron.ipcRenderer.on(
+      'ipc-what-to-ask',
+      () => {
+        if (activatedSession && combinedTranscript.length > 0) {
+          handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT);
+        }
+      },
     );
 
     const unsubscribeAnalyseScreen = window.electron.ipcRenderer.on(
       'ipc-analyse-screen',
-      handleGenerateResponseWithScreenshot,
+      () => {
+        if (activatedSession) {
+          handleGenerateResponseWithScreenshot();
+        }
+      },
     );
 
     const unsubscribeMoveLeft = window.electron.ipcRenderer.on(
@@ -170,6 +190,7 @@ export default function App() {
     return () => {
       unsubscribeToggleHide();
       unsubscribeAnswerQuestion();
+      unsubscribeWhatToAsk();
       unsubscribeAnalyseScreen();
       unsubscribeMoveLeft();
       unsubscribeMoveRight();
@@ -595,7 +616,7 @@ export default function App() {
                   </Button>
                 </a>
               )}
-              {activatedSession && (
+              {activatedSession && callSession?.trial && (
                 <SessionTimerTooltip
                   timeLeft={timeLeft}
                   isExtendingSession={generateSpeechmaticsSessionLoading}
@@ -797,6 +818,11 @@ export default function App() {
               Loading session...
             </div>
           )}
+          {!activatedSession && generateSpeechmaticsSessionLoading && (
+            <div className="text-white bg-black/50 rounded-lg p-2 px-4">
+              Loading session...
+            </div>
+          )}
           {sessionExpired && callSession?.trial && (
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Session has expired. Please create and start a new one in the
@@ -813,9 +839,11 @@ export default function App() {
                       onMouseLeave={onMouseLeave}
                       size="sm"
                       disabled={!combinedTranscript.length}
-                      onClick={() => handleGenerateResponse()}
+                      onClick={() =>
+                        handleGenerateResponse(undefined, AI_HELP_PROMPT)
+                      }
                     >
-                      <Stars className="w-4 h-4" /> AI Answer
+                      <Stars className="w-4 h-4" /> AI Help
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -824,6 +852,35 @@ export default function App() {
                   <TooltipContent>
                     <div className="flex flex-row items-center gap-1">
                       <ShortcutIcon /> + G
+                    </div>
+                  </TooltipContent>
+                ) : (
+                  <TooltipContent>
+                    You need to start listening to answer questions.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      size="sm"
+                      disabled={!combinedTranscript.length}
+                      onClick={() =>
+                        handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT)
+                      }
+                    >
+                      <Stars className="w-4 h-4" /> What to ask?
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+
+                {combinedTranscript.length > 0 ? (
+                  <TooltipContent>
+                    <div className="flex flex-row items-center gap-1">
+                      <ShortcutIcon /> + H
                     </div>
                   </TooltipContent>
                 ) : (

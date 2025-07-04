@@ -16,6 +16,12 @@ type UseSessionTranscriptionProps = {
   version: string;
 };
 
+export const AI_HELP_PROMPT =
+  'Identify if the client has a question or objection and provide a helpful response to address it.';
+
+export const WHAT_TO_ASK_PROMPT =
+  'Based on the conversation so far, suggest 3-5 thoughtful questions I should ask the client to better understand their needs, concerns, or decision-making process.';
+
 export default function useSessionTranscription({
   callSessionId,
   version,
@@ -236,7 +242,7 @@ export default function useSessionTranscription({
 
   // Generate AI response
   const handleGenerateResponse = useCallback(
-    async (message?: string) => {
+    async (message?: string, task?: string) => {
       setHasChatActivitySinceLastExtension(true);
 
       stop();
@@ -244,9 +250,16 @@ export default function useSessionTranscription({
 
       prepareMessagesForNewMessage();
 
+      let content = message || getCombinedTranscriptString();
+
+      // Add task to the end of the message if provided
+      if (task) {
+        content = `${content}\n\n**Task**: ${task}`;
+      }
+
       append({
         role: 'user',
-        content: message || getCombinedTranscriptString(),
+        content: content,
       });
 
       if (!message) {
