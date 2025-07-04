@@ -211,9 +211,9 @@ export default function useCombinedTranscript(
     return combinedTranscript
       .map((t) =>
         t.type === 'microphone'
-          ? `**Sales Agent Transcript**: ${t.finalTranscript + t.partialTranscript}`
+          ? `**Sales Agent Said**: ${t.finalTranscript + t.partialTranscript}`
           : t.type === 'share'
-            ? `**Client Transcript**: ${t.finalTranscript + t.partialTranscript}`
+            ? `**Client Said**: ${t.finalTranscript + t.partialTranscript}`
             : `**Combined Transcript**: ${t.finalTranscript + t.partialTranscript}`,
       )
       .join('\n\n');
