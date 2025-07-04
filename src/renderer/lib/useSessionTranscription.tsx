@@ -256,7 +256,7 @@ export default function useSessionTranscription({
       if (task) {
         content = `${content}\n\n**Task**: ${task}`;
       } else {
-        content = `**Direct Message**: ${content}`;
+        content = `**Direct Message from Sales Agent**: ${content}`;
       }
 
       append({
