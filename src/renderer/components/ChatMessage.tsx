@@ -1,10 +1,6 @@
 import React, { useMemo } from 'react';
 // @ts-ignore
 import Markdown, { Components } from 'react-markdown';
-// @ts-ignore
-import remarkMath from 'remark-math';
-// @ts-ignore
-import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { UIMessage } from 'ai';
 import { CodeBlock } from './CodeBlock';
@@ -110,8 +106,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   return (
     <Markdown
       components={markdownComponents}
-      remarkPlugins={[remarkMath, remarkGfm]}
-      rehypePlugins={[rehypeKatex, rehypeRaw]}
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
     >
       {convertBulletsToMarkdown(message.content)}
     </Markdown>
