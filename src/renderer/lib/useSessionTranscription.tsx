@@ -255,6 +255,8 @@ export default function useSessionTranscription({
       // Add task to the end of the message if provided
       if (task) {
         content = `${content}\n\n**Task**: ${task}`;
+      } else {
+        content = `**Direct Message**: ${content}`;
       }
 
       append({
