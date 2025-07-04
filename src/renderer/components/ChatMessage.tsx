@@ -32,28 +32,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       code: CodeBlock as Components['code'],
       hr: () => <hr className="mx-10 border-gray-700" />,
       h1: ({ children }) => (
-        <h1 className="mb-2 text-2xl font-semibold">{children}</h1>
+        <h1 className="mb-1 text-2xl font-semibold">{children}</h1>
       ),
       h2: ({ children }) => (
-        <h2 className="mb-1 text-xl font-semibold">{children}</h2>
+        <h2 className="text-xl font-semibold">{children}</h2>
       ),
       h3: ({ children }) => <h3 className="text-lg font-medium">{children}</h3>,
       h4: ({ children }) => (
         <h4 className="text-base font-medium">{children}</h4>
       ),
       // List support
-      ul: ({ children }) => <ul className="mb-1">{children}</ul>,
-      ol: ({ children }) => <ol className="mb-1">{children}</ol>,
-      li: ({ children }) => <li className="mb-1">{children}</li>,
+      ul: ({ children }) => <ul>{children}</ul>,
+      ol: ({ children }) => <ol>{children}</ol>,
+      li: ({ children }) => <li>{children}</li>,
       // Blockquote support
       blockquote: ({ children }) => (
-        <blockquote className="my-1 border-l-4 border-gray-700 pl-4 text-gray-300 italic">
+        <blockquote className="border-l-4 border-gray-700 pl-4 text-gray-300 italic">
           {children}
         </blockquote>
       ),
       // Table support
       table: ({ children }) => (
-        <div className="my-1 overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="min-w-full border-collapse border border-gray-300">
             {children}
           </table>
@@ -74,7 +74,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       ),
       // Add image support with custom styling
       img: ({ src, alt, ...props }) => (
-        <div className="my-1 flex justify-center">
+        <div className="flex justify-center">
           <img
             src={src}
             alt={alt}
