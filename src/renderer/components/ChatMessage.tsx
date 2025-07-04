@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 // @ts-ignore
 import Markdown, { Components } from 'react-markdown';
-import 'katex/dist/katex.min.css';
 import { UIMessage } from 'ai';
 import { CodeBlock } from './CodeBlock';
 // @ts-ignore
