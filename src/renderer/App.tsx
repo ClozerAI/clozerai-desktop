@@ -15,7 +15,6 @@ import {
   ArrowRight,
   Stars,
 } from 'lucide-react';
-import { CodeBlock } from './components/CodeBlock';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 import SessionTimerTooltip from './components/SessionTimerTooltip';
@@ -23,8 +22,6 @@ import { Status } from './lib/useAudioTap';
 import icon from '../../assets/icon.png';
 import iconNoText from '../../assets/iconNoText.png';
 
-// @ts-ignore
-import Markdown, { Components } from 'react-markdown';
 import { Tooltip, TooltipContent } from './components/ui/tooltip';
 import { TooltipTrigger } from './components/ui/tooltip';
 import { Input } from './components/ui/input';
@@ -34,6 +31,7 @@ import useSessionTranscription, {
   WHAT_TO_ASK_PROMPT,
 } from './lib/useSessionTranscription';
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
+import ChatMessage from './components/ChatMessage';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -126,12 +124,6 @@ export default function App() {
     handleClearAllAnswers();
     onMouseLeave();
   }
-
-  const markdownComponents = useMemo(() => {
-    return {
-      code: CodeBlock as Components['code'],
-    };
-  }, []);
 
   const setHideAndResize = (value: boolean) => {
     setHide(value);
@@ -283,8 +275,8 @@ export default function App() {
   const [assistantMessageIndex, setAssistantMessageIndex] = useState<number>(0);
 
   // Add state for window sizing and positioning
-  const [windowWidth, _setWindowWidth] = useState<number>(1000);
-  const windowWidthRef = useRef(1000);
+  const [windowWidth, _setWindowWidth] = useState<number>(800);
+  const windowWidthRef = useRef(800);
   function setWindowWidth(newWindowWidth: number) {
     _setWindowWidth(newWindowWidth);
     windowWidthRef.current = newWindowWidth;
@@ -334,7 +326,7 @@ export default function App() {
   }
 
   function handleResetWindow() {
-    setWindowWidth(1000);
+    setWindowWidth(800);
     setWindowPosition(0);
   }
 
@@ -990,16 +982,7 @@ export default function App() {
           </div>
           {/* Show the selected assistant message */}
           {currentAssistantMessage && (
-            <Markdown components={markdownComponents}>
-              {currentAssistantMessage.content
-                // Convert bullet character • to markdown list item
-                .replace(/^•\s+/gm, '- ')
-                // Also handle other common bullet characters
-                .replace(/^‣\s+/gm, '- ')
-                .replace(/^▪\s+/gm, '- ')
-                .replace(/^▫\s+/gm, '- ')
-                .replace(/^‧\s+/gm, '- ')}
-            </Markdown>
+            <ChatMessage message={currentAssistantMessage} />
           )}
           {isLoading && <div>Thinking...</div>}
         </div>
