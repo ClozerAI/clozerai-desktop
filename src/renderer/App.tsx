@@ -162,7 +162,7 @@ export default function App() {
     const unsubscribeWhatToAsk = window.electron.ipcRenderer.on(
       'ipc-what-to-ask',
       () => {
-        if (activatedSession && combinedTranscript.length > 0) {
+        if (activatedSession) {
           handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT);
         }
       },
@@ -867,7 +867,6 @@ export default function App() {
                       onMouseEnter={onMouseEnter}
                       onMouseLeave={onMouseLeave}
                       size="sm"
-                      disabled={!combinedTranscript.length}
                       onClick={() =>
                         handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT)
                       }
