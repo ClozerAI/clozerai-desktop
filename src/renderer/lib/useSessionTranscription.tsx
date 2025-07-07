@@ -100,26 +100,16 @@ export default function useSessionTranscription({
   );
 
   // Chat functionality
-  const {
-    messages,
-    append,
-    stop,
-    setMessages,
-    isLoading,
-    error: chatError,
-  } = useChat({
+  const { messages, append, stop, setMessages, status } = useChat({
     api: 'https://www.clozerai.com/api/chat',
     body: {
       callSessionId: callSession?.id,
       userId: callSession?.userId,
     },
+    onError: (error) => {
+      toast.error(error.message);
+    },
   });
-
-  useEffect(() => {
-    if (chatError) {
-      toast.error(chatError.message);
-    }
-  }, [chatError]);
 
   const [chatInput, setChatInput] = useState('');
 
@@ -414,7 +404,7 @@ export default function useSessionTranscription({
 
     // Chat functionality
     messages,
-    isLoading: isLoading,
+    isLoading: status === 'submitted' || status === 'streaming',
     chatInput,
     setChatInput,
     handleChatSubmit,
