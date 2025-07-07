@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import useAudioTap, { Status } from './useAudioTap';
 import useMicrophoneTranscription from './useMicrophoneTranscription';
 import useCombinedTranscript from './useCombinedTranscript';
-import { useChat } from '@ai-sdk/react';
+import { CreateMessage, Message, useChat } from '@ai-sdk/react';
 import { CallSession, useCallSession } from './useCallSession';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useGenerateSpeechmaticsSession } from './useGenerateSpeechmaticsSession';
 import resizeImage from './resizeImage';
 import { toast } from 'sonner';
+import { useSaveAiAnswers } from './useSaveAiAnswers';
 
 type UseSessionTranscriptionProps = {
   callSessionId: string | null;
@@ -99,6 +100,8 @@ export default function useSessionTranscription({
     },
   );
 
+  const { mutate: saveAiAnswer } = useSaveAiAnswers();
+
   // Chat functionality
   const { messages, append, stop, setMessages, status } = useChat({
     api: 'https://www.clozerai.com/api/chat',
@@ -109,7 +112,30 @@ export default function useSessionTranscription({
     onError: (error) => {
       toast.error(error.message);
     },
+    onFinish: (message) => {
+      if (message.role === 'assistant' && callSession?.id) {
+        saveAiAnswer({
+          callSessionId: callSession?.id,
+          content: message.content,
+          role: message.role,
+          createdAt: message.createdAt || new Date(),
+        });
+      }
+    },
   });
+
+  function appendAndSave(message: Message | CreateMessage) {
+    append(message);
+
+    if (message.role === 'user' && callSession?.id) {
+      saveAiAnswer({
+        callSessionId: callSession?.id,
+        content: message.content,
+        role: message.role,
+        createdAt: message.createdAt || new Date(),
+      });
+    }
+  }
 
   const [chatInput, setChatInput] = useState('');
 
@@ -249,7 +275,7 @@ export default function useSessionTranscription({
         content = `**Direct Message from Sales Agent**: ${content}`;
       }
 
-      append({
+      appendAndSave({
         role: 'user',
         content: content,
       });
@@ -263,7 +289,7 @@ export default function useSessionTranscription({
     [
       stop,
       prepareMessagesForNewMessage,
-      append,
+      appendAndSave,
       getCombinedTranscriptString,
       clearCombinedTranscript,
     ],
@@ -297,7 +323,7 @@ export default function useSessionTranscription({
       prepareMessagesForNewMessage();
 
       // Send as a new user message containing text + image
-      append({
+      appendAndSave({
         role: 'user',
         content:
           "This is a screenshot of the callee's screen. Analyze the screen and provide a useful response.",
@@ -306,7 +332,12 @@ export default function useSessionTranscription({
     } catch (err) {
       console.error('Listen error:', err);
     }
-  }, [stop, captureScreenshotMutate, append, prepareMessagesForNewMessage]);
+  }, [
+    stop,
+    captureScreenshotMutate,
+    appendAndSave,
+    prepareMessagesForNewMessage,
+  ]);
 
   // Chat form submission
   const handleChatSubmit = useCallback(
