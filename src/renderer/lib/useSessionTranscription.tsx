@@ -339,17 +339,6 @@ export default function useSessionTranscription({
     prepareMessagesForNewMessage,
   ]);
 
-  // Chat form submission
-  const handleChatSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (chatInput.trim()) {
-        handleGenerateResponse('direct-message');
-      }
-    },
-    [chatInput, handleGenerateResponse],
-  );
-
   // Stop all recordings
   const handleStopAllRecording = useCallback(() => {
     stopAudioTapRecording();
@@ -438,7 +427,6 @@ export default function useSessionTranscription({
     isLoading: status === 'submitted' || status === 'streaming',
     chatInput,
     setChatInput,
-    handleChatSubmit,
     handleGenerateResponse,
     handleClearAllAnswers,
 
