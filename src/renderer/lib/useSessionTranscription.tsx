@@ -113,7 +113,11 @@ export default function useSessionTranscription({
       toast.error(error.message);
     },
     onFinish: (message) => {
-      if (message.role === 'assistant' && callSession?.id) {
+      if (
+        message.role === 'assistant' &&
+        callSession?.id &&
+        callSession.saveTranscription
+      ) {
         saveAiAnswer({
           callSessionId: callSession?.id,
           content: message.content,
@@ -127,7 +131,11 @@ export default function useSessionTranscription({
   function appendAndSave(message: Message | CreateMessage) {
     append(message);
 
-    if (message.role === 'user' && callSession?.id) {
+    if (
+      message.role === 'user' &&
+      callSession?.id &&
+      callSession.saveTranscription
+    ) {
       saveAiAnswer({
         callSessionId: callSession?.id,
         content: message.content,
