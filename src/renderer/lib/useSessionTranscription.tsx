@@ -17,12 +17,6 @@ type UseSessionTranscriptionProps = {
   version: string;
 };
 
-export const AI_HELP_PROMPT =
-  'Identify if the client has a question or objection and provide a helpful response to address it.';
-
-export const WHAT_TO_ASK_PROMPT =
-  'Based on the conversation so far, suggest 3-5 thoughtful questions I should ask the client to better understand their needs, concerns, or decision-making process.';
-
 export default function useSessionTranscription({
   callSessionId,
   version,
@@ -186,7 +180,7 @@ export default function useSessionTranscription({
       newCallSession,
     );
 
-    let speechmaticsApiKey = callSession?.speechmaticsApiKey;
+    let speechmaticsApiKey = newCallSession.speechmaticsApiKey;
     if (!speechmaticsApiKey) {
       const activatedCallSession = await generateSpeechmaticsSession();
       speechmaticsApiKey = activatedCallSession.speechmaticsApiKey;
@@ -266,7 +260,7 @@ export default function useSessionTranscription({
 
   // Generate AI response
   const handleGenerateResponse = useCallback(
-    async (message?: string, task?: string) => {
+    async (task: 'ai-help' | 'what-to-say' | 'direct-message') => {
       setHasChatActivitySinceLastExtension(true);
 
       stop();
@@ -274,24 +268,22 @@ export default function useSessionTranscription({
 
       prepareMessagesForNewMessage();
 
-      let content = message || getCombinedTranscriptString();
+      let content =
+        task === 'direct-message'
+          ? '**Direct Message from Sales Agent**: ' + chatInput
+          : chatInput || getCombinedTranscriptString();
 
-      // Add task to the end of the message if provided
-      if (task) {
-        content = `${content}\n\n**Task**: ${task}`;
-      } else {
-        content = `**Direct Message from Sales Agent**: ${content}`;
-      }
-
+      // Pass task in message data instead of appending to content
       appendAndSave({
         role: 'user',
-        content: content,
+        content,
+        data: { task },
       });
 
-      if (!message) {
-        clearCombinedTranscript();
-      } else {
+      if (task === 'direct-message') {
         setChatInput('');
+      } else {
+        clearCombinedTranscript();
       }
     },
     [
@@ -352,7 +344,7 @@ export default function useSessionTranscription({
     (e: React.FormEvent) => {
       e.preventDefault();
       if (chatInput.trim()) {
-        handleGenerateResponse(chatInput);
+        handleGenerateResponse('direct-message');
       }
     },
     [chatInput, handleGenerateResponse],
@@ -392,7 +384,7 @@ export default function useSessionTranscription({
     if (willAutoExtend && timeLeft && timeLeft < 60000 && !hasAutoExtended) {
       setHasAutoExtended(true);
       if (callSession) {
-        generateSpeechmaticsSession();
+        handleSessionExtended(callSession);
       }
     }
   }, [
@@ -400,7 +392,7 @@ export default function useSessionTranscription({
     timeLeft,
     hasAutoExtended,
     callSession,
-    generateSpeechmaticsSession,
+    handleSessionExtended,
   ]);
 
   useEffect(() => {

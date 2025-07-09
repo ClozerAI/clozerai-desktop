@@ -26,10 +26,7 @@ import { Tooltip, TooltipContent } from './components/ui/tooltip';
 import { TooltipTrigger } from './components/ui/tooltip';
 import { Input } from './components/ui/input';
 import useVersion from './lib/useVersion';
-import useSessionTranscription, {
-  AI_HELP_PROMPT,
-  WHAT_TO_ASK_PROMPT,
-} from './lib/useSessionTranscription';
+import useSessionTranscription from './lib/useSessionTranscription';
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 import ChatMessage from './components/ChatMessage';
 
@@ -146,7 +143,7 @@ export default function App() {
       'ipc-answer-question',
       () => {
         if (activatedSession && combinedTranscript.length > 0) {
-          handleGenerateResponse(undefined, AI_HELP_PROMPT);
+          handleGenerateResponse('ai-help');
         }
       },
     );
@@ -155,7 +152,7 @@ export default function App() {
       'ipc-what-to-ask',
       () => {
         if (activatedSession) {
-          handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT);
+          handleGenerateResponse('what-to-say');
         }
       },
     );
@@ -830,12 +827,9 @@ export default function App() {
                       onMouseEnter={onMouseEnter}
                       onMouseLeave={onMouseLeave}
                       size="sm"
-                      disabled={!combinedTranscript.length}
-                      onClick={() =>
-                        handleGenerateResponse(undefined, AI_HELP_PROMPT)
-                      }
+                      onClick={() => handleGenerateResponse('what-to-say')}
                     >
-                      <Stars className="w-4 h-4" /> AI Help
+                      <Stars className="w-4 h-4" /> What to say?
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -859,11 +853,9 @@ export default function App() {
                       onMouseEnter={onMouseEnter}
                       onMouseLeave={onMouseLeave}
                       size="sm"
-                      onClick={() =>
-                        handleGenerateResponse(undefined, WHAT_TO_ASK_PROMPT)
-                      }
+                      onClick={() => handleGenerateResponse('ai-help')}
                     >
-                      <Stars className="w-4 h-4" /> What to ask?
+                      <Stars className="w-4 h-4" /> AI Help
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -900,7 +892,7 @@ export default function App() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleGenerateResponse(chatInput);
+                  handleGenerateResponse('direct-message');
                 }}
                 className="flex flex-row w-full items-center gap-2 max-w-sm"
               >

@@ -24,6 +24,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
         .replace(/^▪\s+/gm, '- ')
         .replace(/^▫\s+/gm, '- ')
         .replace(/^‧\s+/gm, '- ')
+        // Fix blockquotes: add blank line after blockquote if next line doesn't start with > and isn't already blank
+        .replace(/^(>\s*.*)\n(?!\n|>)/gm, '$1\n\n')
     );
   };
 
