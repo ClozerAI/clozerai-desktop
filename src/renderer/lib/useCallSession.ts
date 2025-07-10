@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 export type CallSession = {
   // Base fields from the database schema
-  userId: string;
+  userId: string | null;
   id: string;
   company: string;
   language: string;
@@ -21,6 +21,7 @@ export type CallSession = {
   loadingSummary: boolean;
   errorSummary: string | null;
   deleted: boolean;
+  workspaceId: string | null;
 
   // Additional computed fields added by the API
   expired: boolean; // Computed from endsAt < new Date()

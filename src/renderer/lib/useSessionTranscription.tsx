@@ -102,6 +102,7 @@ export default function useSessionTranscription({
     body: {
       callSessionId: callSession?.id,
       userId: callSession?.userId,
+      workspaceId: callSession?.workspaceId,
     },
     onError: (error) => {
       toast.error(error.message);
