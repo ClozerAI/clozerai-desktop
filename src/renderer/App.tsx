@@ -745,6 +745,8 @@ export default function App() {
                           combinedTranscript={combinedTranscript}
                           isRecordingMicrophone={isRecordingMicrophone}
                           isRecordingShare={audioTapStatus === Status.RECORDING}
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
                         />
                       </TooltipContent>
                     </Tooltip>

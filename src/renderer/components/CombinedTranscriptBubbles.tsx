@@ -9,21 +9,29 @@ interface CombinedTranscriptBubblesProps {
   }[];
   isRecordingMicrophone?: boolean;
   isRecordingShare?: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }
 
 export default function CombinedTranscriptBubbles({
   combinedTranscript,
   isRecordingMicrophone,
   isRecordingShare,
+  onMouseEnter,
+  onMouseLeave,
 }: CombinedTranscriptBubblesProps) {
   return (
-    <div className="text-xs flex flex-col gap-2 py-1">
+    <div
+      className="text-xs flex flex-col gap-2 py-1 max-h-[400px] overflow-y-auto"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {combinedTranscript.length > 0
         ? combinedTranscript.map((t) => (
             <div
               key={t.createdAt.getTime()}
               className={cn(
-                'rounded-lg text-white',
+                'rounded-lg text-white w-full',
                 t.type === 'microphone' ? 'self-end text-right' : 'self-start',
               )}
             >
@@ -33,7 +41,7 @@ export default function CombinedTranscriptBubbles({
               </div>
               <div className={cn('text-xs text-gray-600')}>
                 {t.type === 'share'
-                  ? 'Caller'
+                  ? 'Client'
                   : t.type === 'microphone'
                     ? 'You'
                     : 'Combined'}{' '}
