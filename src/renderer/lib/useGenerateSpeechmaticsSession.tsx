@@ -55,6 +55,7 @@ function formatOSVersion(os: string, version: string): string {
 export function useGenerateSpeechmaticsSession(
   version: string,
   callSessionId: string | null,
+  onSuccess: (res: CallSession) => void,
 ) {
   const queryClient = useQueryClient();
   return useMutation<CallSession>({
@@ -102,6 +103,7 @@ export function useGenerateSpeechmaticsSession(
         ['callSession', callSessionId],
         res,
       );
+      onSuccess(res);
     },
   });
 }

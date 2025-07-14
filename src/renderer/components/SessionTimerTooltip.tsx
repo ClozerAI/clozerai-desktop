@@ -24,6 +24,12 @@ export default function SessionTimerTooltip({
   canExtend,
   short = false,
 }: SessionTimerTooltipProps) {
+  console.log('timeLeft', timeLeft);
+  console.log('isExtendingSession', isExtendingSession);
+  console.log('willAutoExtend', willAutoExtend);
+  console.log('canAutoExtend', canAutoExtend);
+  console.log('canExtend', canExtend);
+
   if (!timeLeft || timeLeft <= 0) return null;
 
   return (
@@ -54,7 +60,7 @@ export default function SessionTimerTooltip({
       </TooltipTrigger>
       {willAutoExtend ? (
         <TooltipContent className="z-20">
-          The session will auto extend and 0.5 credits will be deducted.
+          The session will auto extend.
         </TooltipContent>
       ) : canAutoExtend ? (
         <TooltipContent className="z-20">
@@ -68,7 +74,7 @@ export default function SessionTimerTooltip({
         <TooltipContent className="z-20">
           This session will not auto extend because
           <br />
-          you have no call credits left.
+          you don't have an active subscription.
         </TooltipContent>
       ) : null}
     </Tooltip>

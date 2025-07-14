@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useAudioTap, { Status } from './useAudioTap';
 import useMicrophoneTranscription from './useMicrophoneTranscription';
 import useCombinedTranscript from './useCombinedTranscript';
 import { CreateMessage, Message, useChat } from '@ai-sdk/react';
 import { CallSession, useCallSession } from './useCallSession';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useGenerateSpeechmaticsSession } from './useGenerateSpeechmaticsSession';
 import resizeImage from './resizeImage';
 import { toast } from 'sonner';
@@ -21,8 +21,6 @@ export default function useSessionTranscription({
   callSessionId,
   version,
 }: UseSessionTranscriptionProps) {
-  const queryClient = useQueryClient();
-
   const {
     data: callSession,
     isLoading: callSessionLoading,
@@ -40,7 +38,11 @@ export default function useSessionTranscription({
     mutateAsync: generateSpeechmaticsSession,
     isPending: generateSpeechmaticsSessionLoading,
     error: generateSpeechmaticsSessionError,
-  } = useGenerateSpeechmaticsSession(version, callSessionId);
+  } = useGenerateSpeechmaticsSession(
+    version,
+    callSessionId,
+    handleSessionExtended,
+  );
 
   useEffect(() => {
     if (generateSpeechmaticsSessionError) {
@@ -176,16 +178,7 @@ export default function useSessionTranscription({
 
   // Session extended handler
   async function handleSessionExtended(newCallSession: CallSession) {
-    queryClient.setQueryData(
-      ['callSession', newCallSession.id],
-      newCallSession,
-    );
-
-    let speechmaticsApiKey = newCallSession.speechmaticsApiKey;
-    if (!speechmaticsApiKey) {
-      const activatedCallSession = await generateSpeechmaticsSession();
-      speechmaticsApiKey = activatedCallSession.speechmaticsApiKey;
-    }
+    let speechmaticsApiKey = newCallSession?.speechmaticsApiKey!;
 
     if (audioTapStatus === Status.RECORDING) {
       switchAudioTapApiKey(speechmaticsApiKey!, newCallSession.language);
@@ -364,17 +357,22 @@ export default function useSessionTranscription({
 
   // Stop recording when session expires
   useEffect(() => {
-    if (sessionExpired) {
+    if (sessionExpired && callSession.trial) {
       handleStopAllRecording();
     }
-  }, [sessionExpired, stopAudioTapRecording, stopMicrophoneRecording]);
+  }, [
+    sessionExpired,
+    callSession,
+    stopAudioTapRecording,
+    stopMicrophoneRecording,
+  ]);
 
   // Auto-extension logic
   useEffect(() => {
     if (willAutoExtend && timeLeft && timeLeft < 60000 && !hasAutoExtended) {
       setHasAutoExtended(true);
       if (callSession) {
-        handleSessionExtended(callSession);
+        generateSpeechmaticsSession();
       }
     }
   }, [
@@ -382,7 +380,7 @@ export default function useSessionTranscription({
     timeLeft,
     hasAutoExtended,
     callSession,
-    handleSessionExtended,
+    generateSpeechmaticsSession,
   ]);
 
   useEffect(() => {

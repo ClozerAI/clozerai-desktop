@@ -370,8 +370,6 @@ export default function App() {
     setAssistantMessageIndex(assistantMessages.length - 1);
   }, [assistantMessages.length]);
 
-  const isSessionValid = callSession && !callSession.expired;
-
   const nonActivatedSession =
     callSession && !callSession.speechmaticsApiKey && !callSession.expired;
 
@@ -605,7 +603,7 @@ export default function App() {
                   </Button>
                 </a>
               )}
-              {activatedSession && callSession?.trial && (
+              {activatedSession && (
                 <SessionTimerTooltip
                   timeLeft={timeLeft}
                   isExtendingSession={generateSpeechmaticsSessionLoading}
@@ -762,7 +760,7 @@ export default function App() {
                 </div>
               </div>
             )}
-          {!isSessionValid && (
+          {!callSession && (
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Create a session in the dashboard and click "Open in Desktop App"
               to start.{' '}
@@ -778,7 +776,7 @@ export default function App() {
               )}
             </div>
           )}
-          {showEnterIdManually && !isSessionValid && (
+          {showEnterIdManually && !callSession && (
             <div className="flex flex-row items-center gap-2 w-full justify-center">
               <Input
                 placeholder="Call Session ID"
