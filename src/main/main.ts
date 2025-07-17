@@ -337,7 +337,7 @@ const createWindow = async () => {
   mainWindow.setSize(area.width, area.height);
 
   // Initially ignore mouse events (overlay style)
-  // mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
