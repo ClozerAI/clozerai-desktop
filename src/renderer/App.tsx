@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Stars,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
@@ -219,6 +221,9 @@ export default function App() {
     useState(false);
   const logoClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Add state for privacy mode (default to private)
+  const [isPrivate, setIsPrivate] = useState(true);
+
   // Add function to handle logo clicks
   const handleLogoClick = (event: React.MouseEvent<HTMLImageElement>) => {
     // Only proceed if Command key is held
@@ -267,6 +272,13 @@ export default function App() {
       unsubscribeClearMessages();
     };
   }, [handleClearAIAnswer]);
+
+  // Initialize privacy mode to private on mount
+  useEffect(() => {
+    if (window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.sendMessage('ipc-toggle-privacy', true);
+    }
+  }, []);
 
   // Add state for assistant message navigation
   const [assistantMessageIndex, setAssistantMessageIndex] = useState<number>(0);
@@ -325,6 +337,15 @@ export default function App() {
   function handleResetWindow() {
     setWindowWidth(800);
     setWindowPosition(0);
+  }
+
+  function handleTogglePrivacy() {
+    const newPrivacyState = !isPrivate;
+    setIsPrivate(newPrivacyState);
+    window.electron?.ipcRenderer.sendMessage(
+      'ipc-toggle-privacy',
+      newPrivacyState,
+    );
   }
 
   // Filter only assistant messages
@@ -577,6 +598,21 @@ export default function App() {
                           title="Reset Position & Size"
                         >
                           <RotateCcw className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          size="sm"
+                          onClick={handleTogglePrivacy}
+                          className="bg-transparent hover:bg-white/20"
+                          title={`${isPrivate ? 'Disable' : 'Enable'} Privacy Mode`}
+                        >
+                          {isPrivate ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                       <div className="text-xs text-gray-400 text-center">

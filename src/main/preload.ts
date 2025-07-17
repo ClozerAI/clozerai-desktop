@@ -22,6 +22,7 @@ export type Channels =
   | 'ipc-narrow-window'
   | 'ipc-reset-window'
   | 'ipc-toggle-content-protection'
+  | 'ipc-toggle-privacy'
   | 'ipc-clear-messages'
   | 'ipc-write-clipboard';
 

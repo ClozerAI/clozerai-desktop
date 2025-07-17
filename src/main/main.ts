@@ -171,6 +171,13 @@ ipcMain.on('ipc-toggle-content-protection', (_, disabled: boolean) => {
   }
 });
 
+// Add new IPC handler for toggling privacy mode
+ipcMain.on('ipc-toggle-privacy', (_, isPrivate: boolean) => {
+  if (mainWindow) {
+    mainWindow.setContentProtection(isPrivate);
+  }
+});
+
 // Add clipboard handler
 ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
   try {
@@ -330,7 +337,7 @@ const createWindow = async () => {
   mainWindow.setSize(area.width, area.height);
 
   // Initially ignore mouse events (overlay style)
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  // mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 

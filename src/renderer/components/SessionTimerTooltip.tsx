@@ -24,12 +24,6 @@ export default function SessionTimerTooltip({
   canExtend,
   short = false,
 }: SessionTimerTooltipProps) {
-  console.log('timeLeft', timeLeft);
-  console.log('isExtendingSession', isExtendingSession);
-  console.log('willAutoExtend', willAutoExtend);
-  console.log('canAutoExtend', canAutoExtend);
-  console.log('canExtend', canExtend);
-
   if (!timeLeft || timeLeft <= 0) return null;
 
   return (
