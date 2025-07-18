@@ -284,8 +284,8 @@ export default function App() {
   const [assistantMessageIndex, setAssistantMessageIndex] = useState<number>(0);
 
   // Add state for window sizing and positioning
-  const [windowWidth, _setWindowWidth] = useState<number>(800);
-  const windowWidthRef = useRef(800);
+  const [windowWidth, _setWindowWidth] = useState<number>(600);
+  const windowWidthRef = useRef(600);
   function setWindowWidth(newWindowWidth: number) {
     _setWindowWidth(newWindowWidth);
     windowWidthRef.current = newWindowWidth;
@@ -335,7 +335,7 @@ export default function App() {
   }
 
   function handleResetWindow() {
-    setWindowWidth(800);
+    setWindowWidth(600);
     setWindowPosition(0);
   }
 
