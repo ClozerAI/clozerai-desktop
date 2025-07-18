@@ -85,6 +85,18 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           />
         </div>
       ),
+      // Add link support with underline styling
+      a: ({ href, children, ...props }) => (
+        <a
+          href={href}
+          className="underline underline-offset-2"
+          target="_blank"
+          rel="noopener noreferrer"
+          {...props}
+        >
+          {children}
+        </a>
+      ),
       // Add task list support
       input: ({ type, checked, ...props }) => {
         if (type === 'checkbox') {
