@@ -408,6 +408,13 @@ export default function App() {
   const activatedSession =
     callSession && callSession.speechmaticsApiKey && !callSession.expired;
 
+  useEffect(() => {
+    if (activatedSession) {
+      handleStartAudioTapTranscription();
+      handleStartMicrophoneTranscription();
+    }
+  }, [activatedSession]);
+
   if (hide) {
     return (
       <div className="flex flex-col w-full gap-2 items-center min-h-screen">
@@ -650,23 +657,28 @@ export default function App() {
                 />
               )}
               {activatedSession && audioTapStatus === Status.RECORDING ? (
-                <Button
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                  size="sm"
-                  onClick={stopAudioTapRecording}
-                  className="flex flex-row items-center gap-2"
-                >
-                  <Laptop className="w-4 h-4" />
-                  <span
-                    className={cn(
-                      'h-3 w-3 rounded-full bg-red-500 shadow-lg',
-                      'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
-                      'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
-                      'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
-                    )}
-                  />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      size="sm"
+                      onClick={stopAudioTapRecording}
+                      className="flex flex-row items-center gap-2"
+                    >
+                      <Laptop className="w-4 h-4" />
+                      <span
+                        className={cn(
+                          'h-3 w-3 rounded-full bg-red-500 shadow-lg',
+                          'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
+                          'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
+                          'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
+                        )}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Stop</TooltipContent>
+                </Tooltip>
               ) : (
                 activatedSession && (
                   <Tooltip>
@@ -691,23 +703,31 @@ export default function App() {
                 )
               )}
               {activatedSession && isRecordingMicrophone ? (
-                <Button
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                  size="sm"
-                  onClick={handleStopMicrophoneTranscription}
-                  className="flex flex-row items-center gap-2"
-                >
-                  <Mic className="w-4 h-4" />
-                  <span
-                    className={cn(
-                      'h-3 w-3 rounded-full bg-red-500 shadow-lg',
-                      'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
-                      'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
-                      'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
-                    )}
-                  />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      size="sm"
+                      onClick={handleStopMicrophoneTranscription}
+                      className="flex flex-row items-center gap-2"
+                    >
+                      <Mic className="w-4 h-4" />
+                      <span
+                        className={cn(
+                          'h-3 w-3 rounded-full bg-red-500 shadow-lg',
+                          'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
+                          'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
+                          'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
+                        )}
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    Stop <br /> Note: You need to use headphones to prevent the
+                    computer audio from being picked up.
+                  </TooltipContent>
+                </Tooltip>
               ) : (
                 activatedSession && (
                   <Tooltip>
