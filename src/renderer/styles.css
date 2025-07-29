@@ -117,3 +117,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
+ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
