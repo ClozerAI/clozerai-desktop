@@ -27,6 +27,22 @@ export type CallSession = {
   expired: boolean; // Computed from endsAt < new Date()
   timeLeft: number | null; // Computed from endsAt.getTime() - new Date().getTime()
   canExtend: boolean;
+
+  // Additional real-time prompt fields
+  builtInPrompts: {
+    id: string;
+    title: string;
+    prompt: string;
+    description: string;
+  }[];
+  realTimePrompts: {
+    id: string;
+    createdAt: Date | null;
+    userId: string | null;
+    workspaceId: string | null;
+    title: string;
+    prompt: string;
+  }[];
 };
 
 export function useCallSession(callSessionId: string | null) {

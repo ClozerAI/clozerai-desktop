@@ -13,7 +13,6 @@ import {
   Text,
   ArrowLeft,
   ArrowRight,
-  Stars,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -101,6 +100,23 @@ export default function App() {
     version: version || 'unknown',
   });
 
+  const allPrompts = useMemo(() => {
+    return callSession
+      ? [
+          ...callSession.builtInPrompts.map((p) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+          })),
+          ...callSession.realTimePrompts.map((p) => ({
+            id: p.id,
+            title: p.title,
+            description: p.prompt,
+          })),
+        ]
+      : null;
+  }, [callSession]);
+
   function onMouseEnter() {
     window.electron?.ipcRenderer.sendMessage(
       'ipc-toggle-ignore-mouse-events',
@@ -128,6 +144,9 @@ export default function App() {
     setHide(value);
   };
 
+  const activatedSession =
+    callSession && callSession.speechmaticsApiKey && !callSession.expired;
+
   // Update keyboard shortcut handlers
   useEffect(() => {
     if (!window.electron?.ipcRenderer) return;
@@ -144,8 +163,13 @@ export default function App() {
     const unsubscribeAnswerQuestion = window.electron.ipcRenderer.on(
       'ipc-answer-question',
       () => {
-        if (activatedSession && combinedTranscript.length > 0) {
-          handleGenerateResponse('ai-help');
+        if (
+          activatedSession &&
+          combinedTranscript.length > 0 &&
+          allPrompts &&
+          allPrompts.length > 0
+        ) {
+          handleGenerateResponse(allPrompts[0].id);
         }
       },
     );
@@ -153,8 +177,8 @@ export default function App() {
     const unsubscribeWhatToAsk = window.electron.ipcRenderer.on(
       'ipc-what-to-ask',
       () => {
-        if (activatedSession) {
-          handleGenerateResponse('what-to-say');
+        if (activatedSession && allPrompts && allPrompts.length > 1) {
+          handleGenerateResponse(allPrompts[1].id);
         }
       },
     );
@@ -186,7 +210,15 @@ export default function App() {
       unsubscribeMoveLeft();
       unsubscribeMoveRight();
     };
-  }, [handleGenerateResponse, handleGenerateResponseWithScreenshot]);
+  }, [
+    handleGenerateResponse,
+    handleGenerateResponseWithScreenshot,
+    activatedSession,
+    allPrompts,
+    combinedTranscript,
+    handleMoveLeft,
+    handleMoveRight,
+  ]);
 
   // Add new useEffect for protocol handling
   useEffect(() => {
@@ -404,9 +436,6 @@ export default function App() {
     sessionExpired,
     callSession,
   ]);
-
-  const activatedSession =
-    callSession && callSession.speechmaticsApiKey && !callSession.expired;
 
   useEffect(() => {
     if (activatedSession) {
@@ -817,18 +846,18 @@ export default function App() {
               </div>
             )}
           {!callSession && (
-            <div className="text-white bg-black/50 rounded-lg p-2 px-4">
+            <div className="text-white bg-black/50 rounded-lg p-2 px-4 flex flex-col items-center">
               Create a session in the dashboard and click "Open in Desktop App"
-              to start.{' '}
+              to start or{' '}
               {!showEnterIdManually && (
-                <span
+                <div
                   onClick={() => setShowEnterIdManually(true)}
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   className="underline"
                 >
                   Enter ID manually.
-                </span>
+                </div>
               )}
             </div>
           )}
@@ -876,58 +905,63 @@ export default function App() {
           )}
           {activatedSession && (
             <div className="flex flex-row items-center gap-2 mt-1 w-full justify-center">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave}
-                      size="sm"
-                      onClick={() => handleGenerateResponse('what-to-say')}
-                    >
-                      <Stars className="w-4 h-4" /> What to say?
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-
-                {combinedTranscript.length > 0 ? (
-                  <TooltipContent>
-                    <div className="flex flex-row items-center gap-1">
-                      <ShortcutIcon /> + G
-                    </div>
-                  </TooltipContent>
-                ) : (
-                  <TooltipContent>
-                    You need to start listening to answer questions.
-                  </TooltipContent>
-                )}
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave}
-                      size="sm"
-                      onClick={() => handleGenerateResponse('ai-help')}
-                    >
-                      <Stars className="w-4 h-4" /> AI Help
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-
-                {combinedTranscript.length > 0 ? (
-                  <TooltipContent>
-                    <div className="flex flex-row items-center gap-1">
-                      <ShortcutIcon /> + H
-                    </div>
-                  </TooltipContent>
-                ) : (
-                  <TooltipContent>
-                    You need to start listening to answer questions.
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              {allPrompts && allPrompts.length > 0 && (
+                <div className="flex flex-row items-center gap-2">
+                  {allPrompts.map((p, index) => {
+                    // Add tooltips for first and second prompts
+                    if (index === 0) {
+                      return (
+                        <Tooltip key={p.id}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => handleGenerateResponse(p.id)}
+                              onMouseEnter={onMouseEnter}
+                              onMouseLeave={onMouseLeave}
+                            >
+                              {p.title}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="flex flex-row items-center gap-1">
+                            <ShortcutIcon /> + H
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    } else if (index === 1) {
+                      return (
+                        <Tooltip key={p.id}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => handleGenerateResponse(p.id)}
+                              onMouseEnter={onMouseEnter}
+                              onMouseLeave={onMouseLeave}
+                            >
+                              {p.title}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="flex flex-row items-center gap-1">
+                            <ShortcutIcon /> + G
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    } else {
+                      // Regular button for other prompts
+                      return (
+                        <Button
+                          key={p.id}
+                          size="sm"
+                          onClick={() => handleGenerateResponse(p.id)}
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                        >
+                          {p.title}
+                        </Button>
+                      );
+                    }
+                  })}
+                </div>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

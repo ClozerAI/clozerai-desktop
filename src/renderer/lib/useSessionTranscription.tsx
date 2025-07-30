@@ -254,7 +254,7 @@ export default function useSessionTranscription({
 
   // Generate AI response
   const handleGenerateResponse = useCallback(
-    async (task: 'ai-help' | 'what-to-say' | 'direct-message') => {
+    async (promptId: 'ai-help' | 'what-to-say' | 'direct-message' | string) => {
       setHasChatActivitySinceLastExtension(true);
 
       stop();
@@ -263,7 +263,7 @@ export default function useSessionTranscription({
       prepareMessagesForNewMessage();
 
       let content =
-        task === 'direct-message'
+        promptId === 'direct-message'
           ? '**Direct Message from Sales Agent**: ' + chatInput
           : chatInput || getCombinedTranscriptString();
 
@@ -271,10 +271,10 @@ export default function useSessionTranscription({
       appendAndSave({
         role: 'user',
         content,
-        data: { task },
+        data: { promptId },
       });
 
-      if (task === 'direct-message') {
+      if (promptId === 'direct-message') {
         setChatInput('');
       } else {
         clearCombinedTranscript();
