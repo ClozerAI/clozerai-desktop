@@ -758,7 +758,10 @@ export default function App() {
                       />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">
+                  <TooltipContent
+                    side="bottom"
+                    className="max-w-[350px] text-center"
+                  >
                     Stop <br /> Note: You need to use headphones to prevent the
                     computer audio from being picked up.
                   </TooltipContent>
