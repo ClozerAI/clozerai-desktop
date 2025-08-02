@@ -99,22 +99,18 @@ export default function App() {
     version: version || 'unknown',
   });
 
-  const allPrompts = useMemo(() => {
-    return callSession
-      ? [
-          ...(callSession.builtInPrompts || []).map((p) => ({
-            id: p.id,
-            title: p.title,
-            description: p.description,
-          })),
-          ...(callSession.realTimePrompts || []).map((p) => ({
-            id: p.id,
-            title: p.title,
-            description: p.prompt,
-          })),
-        ]
-      : null;
-  }, [callSession]);
+  const allPrompts = [
+    ...(callSession?.builtInPrompts || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+    })),
+    ...(callSession?.realTimePrompts || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.prompt,
+    })),
+  ];
 
   function onMouseEnter() {
     window.electron?.ipcRenderer.sendMessage(
@@ -916,7 +912,7 @@ export default function App() {
             <div className="flex flex-row items-center gap-2 mt-1 w-full justify-center">
               {allPrompts && allPrompts.length > 0 && (
                 <div className="flex flex-row items-center gap-2">
-                  {allPrompts?.map((p, index) => {
+                  {allPrompts.map((p, index) => {
                     // Add tooltips for first and second prompts
                     if (index === 0) {
                       return (
