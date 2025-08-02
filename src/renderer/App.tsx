@@ -64,7 +64,6 @@ export default function App() {
     generateSpeechmaticsSessionLoading,
 
     // Session expiration
-    sessionExpired,
     timeLeft,
     willAutoExtend,
     canAutoExtend,
@@ -145,7 +144,9 @@ export default function App() {
   };
 
   const activatedSession =
-    callSession && callSession.speechmaticsApiKey && !callSession.expired;
+    callSession &&
+    callSession.speechmaticsApiKey &&
+    !callSession.speechmaticsTokenExpired;
 
   // Update keyboard shortcut handlers
   useEffect(() => {
@@ -424,16 +425,21 @@ export default function App() {
   }, [assistantMessages.length]);
 
   const nonActivatedSession =
-    callSession && !callSession.speechmaticsApiKey && !callSession.expired;
+    callSession &&
+    !callSession.speechmaticsApiKey &&
+    !callSession.speechmaticsTokenExpired;
 
   useEffect(() => {
-    if (nonActivatedSession || (sessionExpired && !callSession?.trial)) {
+    if (
+      nonActivatedSession ||
+      (callSession?.speechmaticsTokenExpired && !callSession?.trial)
+    ) {
       generateSpeechmaticsSession();
     }
   }, [
     nonActivatedSession,
     generateSpeechmaticsSession,
-    sessionExpired,
+    callSession?.speechmaticsTokenExpired,
     callSession,
   ]);
 
@@ -897,9 +903,9 @@ export default function App() {
               Loading session...
             </div>
           )}
-          {sessionExpired && callSession?.trial && (
+          {callSession?.hasEnded && callSession?.trial && (
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
-              Session has expired. Please create and start a new one in the
+              Session has ended. Please create and start a new one in the
               dashboard.
             </div>
           )}

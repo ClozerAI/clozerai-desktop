@@ -24,7 +24,8 @@ export type CallSession = {
   workspaceId: string | null;
 
   // Additional computed fields added by the API
-  expired: boolean; // Computed from endsAt < new Date()
+  speechmaticsTokenExpired: boolean; // Computed from endsAt < new Date()
+  hasEnded: boolean; // Computed from endsAt < new Date()
   timeLeft: number | null; // Computed from endsAt.getTime() - new Date().getTime()
   canExtend: boolean;
 

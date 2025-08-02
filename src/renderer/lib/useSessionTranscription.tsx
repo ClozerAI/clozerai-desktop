@@ -11,6 +11,7 @@ import { useGenerateSpeechmaticsSession } from './useGenerateSpeechmaticsSession
 import resizeImage from './resizeImage';
 import { toast } from 'sonner';
 import { useSaveAiAnswers } from './useSaveAiAnswers';
+import { usePingSession } from './usePingSession';
 
 type UseSessionTranscriptionProps = {
   callSessionId: string | null;
@@ -97,6 +98,7 @@ export default function useSessionTranscription({
   );
 
   const { mutate: saveAiAnswer } = useSaveAiAnswers();
+  const { mutate: pingSession } = usePingSession();
 
   // Chat functionality
   const { messages, append, stop, setMessages, status } = useChat({
@@ -146,7 +148,6 @@ export default function useSessionTranscription({
 
   // Session timer and expiration handling
   const [now, setTime] = useState<Date>(new Date());
-  const sessionExpired = callSession && callSession.expired;
   const timeLeft = callSession?.endsAt
     ? new Date(callSession.endsAt).getTime() - now.getTime()
     : null;
@@ -357,15 +358,10 @@ export default function useSessionTranscription({
 
   // Stop recording when session expires
   useEffect(() => {
-    if (sessionExpired && callSession.trial) {
+    if (callSession?.hasEnded) {
       handleStopAllRecording();
     }
-  }, [
-    sessionExpired,
-    callSession,
-    stopAudioTapRecording,
-    stopMicrophoneRecording,
-  ]);
+  }, [callSession?.hasEnded, stopAudioTapRecording, stopMicrophoneRecording]);
 
   // Auto-extension logic
   useEffect(() => {
@@ -389,6 +385,21 @@ export default function useSessionTranscription({
     }
   }, [timeLeft, hasAutoExtended]);
 
+  // Ping system: send ping every 15 seconds when session is active
+  useEffect(() => {
+    if (!callSession || callSession.hasEnded || !callSession.activatedAt) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      pingSession({ callSessionId: callSession.id });
+    }, 15000); // 15 seconds
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [callSession, pingSession]);
+
   return {
     // Call session data
     callSession,
@@ -401,7 +412,6 @@ export default function useSessionTranscription({
     generateSpeechmaticsSessionError,
 
     // Session expiration
-    sessionExpired,
     timeLeft,
     willAutoExtend,
     canAutoExtend,
