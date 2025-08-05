@@ -16,6 +16,7 @@ export type Channels =
   | 'ipc-what-to-ask'
   | 'ipc-analyse-screen'
   | 'ipc-load-session'
+  | 'ipc-store-auth-token'
   | 'ipc-move-window-left'
   | 'ipc-move-window-right'
   | 'ipc-widen-window'
@@ -64,6 +65,9 @@ const electronHandler = {
     },
     async writeClipboard(text: string): Promise<void> {
       return ipcRenderer.invoke('ipc-write-clipboard', text);
+    },
+    async storeAuthToken(authToken: string): Promise<boolean> {
+      return ipcRenderer.invoke('ipc-store-auth-token', authToken);
     },
   },
   platform: process.platform,

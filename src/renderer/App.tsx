@@ -30,6 +30,7 @@ import useVersion from './lib/useVersion';
 import useSessionTranscription from './lib/useSessionTranscription';
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 import ChatMessage from './components/ChatMessage';
+import { useUser } from './lib/useUser';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -39,6 +40,12 @@ function ShortcutIcon({ className = 'w-4 h-4' }: { className?: string }) {
 
 export default function App() {
   const { data: version, isLoading: loadingVersion } = useVersion();
+  const {
+    data: user,
+    isLoading: loadingUser,
+    error: userError,
+    refetch: refetchUser,
+  } = useUser();
 
   const [hide, _setHide] = useState(false);
   const hideRef = useRef(false);
@@ -53,6 +60,11 @@ export default function App() {
   const [callSessionId, setCallSessionId] = useState<string | null>(null);
   const [inputCallSessionId, setInputCallSessionId] = useState<string>('');
   const [showEnterIdManually, setShowEnterIdManually] = useState(false);
+
+  // Manual auth token state
+  const [showEnterTokenManually, setShowEnterTokenManually] = useState(false);
+  const [inputAuthToken, setInputAuthToken] = useState<string>('');
+  const [isSettingAuthToken, setIsSettingAuthToken] = useState(false);
 
   const {
     // Call session data
@@ -124,6 +136,26 @@ export default function App() {
       'ipc-toggle-ignore-mouse-events',
       true,
     );
+  }
+
+  async function handleSetAuthToken() {
+    if (!inputAuthToken.trim()) {
+      return;
+    }
+
+    setIsSettingAuthToken(true);
+    try {
+      await window.electron?.ipcRenderer.storeAuthToken(inputAuthToken.trim());
+      setInputAuthToken('');
+      setShowEnterTokenManually(false);
+      // Refetch user data after setting the token
+      refetchUser();
+    } catch (error) {
+      console.error('Error setting auth token:', error);
+      // You could add error state here if needed
+    } finally {
+      setIsSettingAuthToken(false);
+    }
   }
 
   function handleExit() {
@@ -861,8 +893,50 @@ export default function App() {
                   onMouseLeave={onMouseLeave}
                   className="underline"
                 >
-                  Enter ID manually.
+                  Enter ID manually
                 </div>
+              )}
+              {' or '}
+              {loadingUser ? (
+                <div>loading...</div>
+              ) : !user || userError ? (
+                <div className="flex flex-row items-center gap-2 mt-2">
+                  <Button
+                    onClick={() =>
+                      window.open(
+                        'http://localhost:3000/auth/desktop',
+                        '_blank',
+                      )
+                    }
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                  >
+                    Login
+                  </Button>
+                  {!showEnterTokenManually && (
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      onClick={() => setShowEnterTokenManually(true)}
+                    >
+                      Enter Token Manually
+                    </Button>
+                  )}
+                  {userError && (
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      onClick={() => refetchUser()}
+                    >
+                      Refresh
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div>{user.email}</div>
+              )}
+              {userError && (
+                <div className="mt-2">Auth error: {userError.message}</div>
               )}
             </div>
           )}
@@ -889,6 +963,44 @@ export default function App() {
                 disabled={callSessionLoading}
               >
                 {callSessionLoading ? 'Loading...' : 'Load'}
+              </Button>
+            </div>
+          )}
+          {showEnterTokenManually && userError && (
+            <div className="flex flex-row items-center gap-2 w-full justify-center">
+              <Input
+                placeholder="Auth Token"
+                className="bg-white w-full max-w-xs"
+                value={inputAuthToken}
+                disabled={isSettingAuthToken}
+                onChange={(e) => setInputAuthToken(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSetAuthToken();
+                  }
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+              />
+              <Button
+                variant="outline"
+                onClick={handleSetAuthToken}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                disabled={isSettingAuthToken || !inputAuthToken.trim()}
+              >
+                {isSettingAuthToken ? 'Setting...' : 'Set Token'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowEnterTokenManually(false);
+                  setInputAuthToken('');
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                variant="outline"
+              >
+                Cancel
               </Button>
             </div>
           )}

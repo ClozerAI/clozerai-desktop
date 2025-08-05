@@ -59,6 +59,40 @@ let audioTapInstance: AudioTapResult | null = null;
 // Store the initial protocol URL if the app was launched with one
 let initialProtocolUrl: string | null = null;
 
+// Helper to persist the NextAuth session cookie so that subsequent fetch
+// requests from the renderer include proper authentication
+function setNextAuthCookie(authToken: string) {
+  if (!mainWindow) {
+    console.error('Cannot set auth cookie – mainWindow not ready yet');
+    return;
+  }
+
+  // NOTE: When packaging for production change the URL to your production API
+  const cookieUrl = 'http://localhost:3000';
+
+  mainWindow.webContents.session.cookies
+    .set({
+      url: cookieUrl,
+      name: 'next-auth.session-token',
+      value: authToken,
+      domain: new URL(cookieUrl).hostname,
+      path: '/',
+      // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
+      secure: true,
+      httpOnly: false,
+      // The renderer is served from the file:// protocol which is cross-site
+      // with respect to http://localhost:3000. To make sure the cookie is
+      // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
+      sameSite: 'no_restriction',
+    })
+    .then(() => {
+      console.log('✅ Cookie set successfully for NextAuth');
+    })
+    .catch((error) => {
+      console.error('❌ Error setting NextAuth cookie:', error);
+    });
+}
+
 // One-way command handlers (keep as .on)
 ipcMain.on('ipc-toggle-ignore-mouse-events', async (_, arg) => {
   mainWindow?.setIgnoreMouseEvents(arg, { forward: true });
@@ -189,6 +223,21 @@ ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
   }
 });
 
+// Add manual auth token handler
+ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
+  try {
+    if (!authToken) {
+      throw new Error('Auth token is required');
+    }
+    setNextAuthCookie(authToken);
+    console.log('Auth token set successfully via manual input');
+    return true;
+  } catch (error) {
+    console.error('Error setting auth token:', error);
+    throw error;
+  }
+});
+
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
   sourceMapSupport.install();
@@ -224,18 +273,59 @@ function handleProtocolUrl(url: string) {
     return;
   }
 
-  const sessionId = url.replace(prefix, '').replace(/\/$/, '');
-  console.log('Session ID:', sessionId);
+  const urlWithoutPrefix = url.replace(prefix, '');
+  console.log('URL without prefix:', urlWithoutPrefix);
 
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
+  // Parse the URL to extract path and query parameters
+  const [path, queryString] = urlWithoutPrefix.split('?');
+  const params = new URLSearchParams(queryString || '');
+
+  if (path === 'auth') {
+    // Handle auth-only URL: clozerai://auth?authToken=...
+    const authToken = params.get('authToken');
+    if (authToken) {
+      console.log('Received auth token from protocol');
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        // Set cookies ...
+        setNextAuthCookie(authToken);
+      } else {
+        // Store the URL to handle it once the main window is ready
+        initialProtocolUrl = url;
+      }
+    } else {
+      console.log('No auth token found in auth URL');
     }
-    mainWindow.focus();
-    mainWindow.webContents.send('ipc-load-session', sessionId);
+  } else if (path === 'session') {
+    // Handle session URL: clozerai://session?callSessionId=...&authToken=...
+    const callSessionId = params.get('callSessionId');
+    const authToken = params.get('authToken');
+
+    if (callSessionId && authToken) {
+      console.log(
+        'Received session ID and auth token from protocol:',
+        callSessionId,
+      );
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        // Set cookies ...
+        setNextAuthCookie(authToken);
+        mainWindow.webContents.send('ipc-load-session', callSessionId);
+      } else {
+        // Store the URL to handle it once the main window is ready
+        initialProtocolUrl = url;
+      }
+    } else {
+      console.log('Missing callSessionId or authToken in session URL');
+    }
   } else {
-    // Store the URL to handle it once the main window is ready
-    initialProtocolUrl = url;
+    console.log('Invalid path in protocol URL:', path);
   }
 }
 
