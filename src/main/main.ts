@@ -68,6 +68,9 @@ function setNextAuthCookie(authToken: string) {
     return;
   }
 
+  // Set expiration date to 30 days from now (in seconds since UNIX epoch)
+  const expirationDate = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+
   mainWindow.webContents.session.cookies.set({
     url: NEXTJS_API_URL,
     name: '__Secure-next-auth.session-token',
@@ -81,6 +84,7 @@ function setNextAuthCookie(authToken: string) {
     // with respect to http://localhost:3000. To make sure the cookie is
     // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
     sameSite: 'no_restriction',
+    expirationDate: expirationDate,
   });
 
   mainWindow.webContents.session.cookies.set({
@@ -96,7 +100,11 @@ function setNextAuthCookie(authToken: string) {
     // with respect to http://localhost:3000. To make sure the cookie is
     // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
     sameSite: 'no_restriction',
+    expirationDate: expirationDate,
   });
+
+  // Force write cookies to disk immediately
+  mainWindow.webContents.session.cookies.flushStore();
 
   // Notify the renderer that the auth cookie has been updated
   mainWindow.webContents.send('ipc-auth-cookie-updated');
