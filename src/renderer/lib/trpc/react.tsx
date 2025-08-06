@@ -34,7 +34,7 @@ export type RouterInputs = inferRouterInputs<AppRouter>;
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
-export const NEXTJS_API_URL = 'http://localhost:3000';
+export const NEXTJS_API_URL = 'https://clozerai.com';
 
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
