@@ -19,7 +19,7 @@ import {
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 import SessionTimerTooltip from './components/SessionTimerTooltip';
-import { Status } from './lib/useAudioTap';
+import { Status } from './lib/sessionTranscript/useAudioTap';
 import icon from '../../assets/icon.png';
 import iconNoText from '../../assets/iconNoText.png';
 
@@ -27,10 +27,10 @@ import { Tooltip, TooltipContent } from './components/ui/tooltip';
 import { TooltipTrigger } from './components/ui/tooltip';
 import { Input } from './components/ui/input';
 import useVersion from './lib/useVersion';
-import useSessionTranscription from './lib/useSessionTranscription';
+import useSessionTranscription from './lib/sessionTranscript/useSessionTranscription';
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 import ChatMessage from './components/ChatMessage';
-import { useUser } from './lib/useUser';
+import { api, NEXTJS_API_URL } from './lib/trpc/react';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -40,12 +40,33 @@ function ShortcutIcon({ className = 'w-4 h-4' }: { className?: string }) {
 
 export default function App() {
   const { data: version, isLoading: loadingVersion } = useVersion();
+
+  const utils = api.useUtils();
+
   const {
     data: user,
     isLoading: loadingUser,
     error: userError,
     refetch: refetchUser,
-  } = useUser();
+  } = api.user.getUserProfile.useQuery(undefined, {
+    retry: false,
+  });
+
+  const hasActiveSubscription =
+    (user?.currentWorkspace
+      ? user.currentWorkspace.hasActiveSubscription
+      : user?.hasActiveSubscription) || false;
+
+  const { mutate: createCallSession, isPending: isCreatingCallSession } =
+    api.callSession.create.useMutation({
+      onSuccess: (data) => {
+        setCallSessionId(data.id);
+        utils.callSession.get.setData({ id: data.id }, data);
+        // Reset Quick Start input form
+        setShowQuickStartInput(false);
+        setClientName('');
+      },
+    });
 
   const [hide, _setHide] = useState(false);
   const hideRef = useRef(false);
@@ -60,6 +81,10 @@ export default function App() {
   const [callSessionId, setCallSessionId] = useState<string | null>(null);
   const [inputCallSessionId, setInputCallSessionId] = useState<string>('');
   const [showEnterIdManually, setShowEnterIdManually] = useState(false);
+
+  // Quick Start Session client name state
+  const [showQuickStartInput, setShowQuickStartInput] = useState(false);
+  const [clientName, setClientName] = useState<string>('');
 
   // Manual auth token state
   const [showEnterTokenManually, setShowEnterTokenManually] = useState(false);
@@ -106,21 +131,42 @@ export default function App() {
     // Combined transcript
     combinedTranscript,
     clearTranscripts,
+
+    // Session reset
+    handleResetSession,
   } = useSessionTranscription({
     callSessionId,
     version: version || 'unknown',
   });
 
+  const { data: builtInPrompts, isLoading: isLoadingBuiltInPrompts } =
+    api.realTimePrompts.getBuiltInPrompts.useQuery(undefined, {
+      enabled: !!user,
+    });
+
+  const { data: realTimePromptsResponse, isLoading: isLoadingRealTimePrompts } =
+    api.realTimePrompts.getMany.useQuery(
+      {
+        limit: 100,
+        offset: 0,
+      },
+      {
+        enabled: !!user,
+      },
+    );
+
+  const realTimePrompts = realTimePromptsResponse?.data ?? [];
+
   const allPrompts = [
-    ...(callSession?.builtInPrompts || []).map((p) => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-    })),
-    ...(callSession?.realTimePrompts || []).map((p) => ({
+    ...(realTimePrompts || []).map((p) => ({
       id: p.id,
       title: p.title,
       description: p.prompt,
+    })),
+    ...(builtInPrompts?.builtInPrompts || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
     })),
   ];
 
@@ -158,8 +204,27 @@ export default function App() {
     }
   }
 
+  async function handleLogout() {
+    try {
+      // Clear the auth token by storing an empty string
+      await window.electron?.ipcRenderer.storeAuthToken('');
+      // Refetch user data to update the UI state
+      refetchUser();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  }
+
   function handleExit() {
-    window.electron?.ipcRenderer.quitApp();
+    if (callSessionId) {
+      // If there's an active session, reset all state and clear session ID
+      handleResetSession();
+      setCallSessionId(null);
+      setInputCallSessionId('');
+    } else {
+      // If no active session, quit the app
+      window.electron?.ipcRenderer.quitApp();
+    }
   }
 
   function handleClearAIAnswer() {
@@ -212,15 +277,6 @@ export default function App() {
       },
     );
 
-    const unsubscribeAnalyseScreen = window.electron.ipcRenderer.on(
-      'ipc-analyse-screen',
-      () => {
-        if (activatedSession) {
-          handleGenerateResponseWithScreenshot();
-        }
-      },
-    );
-
     const unsubscribeMoveLeft = window.electron.ipcRenderer.on(
       'ipc-move-window-left',
       handleMoveLeft,
@@ -235,7 +291,6 @@ export default function App() {
       unsubscribeToggleHide();
       unsubscribeAnswerQuestion();
       unsubscribeWhatToAsk();
-      unsubscribeAnalyseScreen();
       unsubscribeMoveLeft();
       unsubscribeMoveRight();
     };
@@ -460,9 +515,9 @@ export default function App() {
   useEffect(() => {
     if (
       nonActivatedSession ||
-      (callSession?.speechmaticsTokenExpired && !callSession?.trial)
+      (callSession?.speechmaticsTokenExpired && !callSession?.hasEnded)
     ) {
-      generateSpeechmaticsSession();
+      generateSpeechmaticsSession(callSession?.id);
     }
   }, [
     nonActivatedSession,
@@ -699,24 +754,45 @@ export default function App() {
 
             <div className="flex flex-row items-center gap-2">
               {!activatedSession && (
-                <a target="_blank" href="https://www.clozerai.com/dashboard">
-                  <Button
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
-                    size="sm"
-                  >
-                    Dashboard
-                  </Button>
-                </a>
+                <>
+                  <a target="_blank" href={`${NEXTJS_API_URL}/dashboard`}>
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      size="sm"
+                    >
+                      Dashboard
+                    </Button>
+                  </a>
+                  {user && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          size="sm"
+                          onClick={handleLogout}
+                        >
+                          Logout
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {user.email} (
+                        {user.currentWorkspace?.name || 'Personal'})
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </>
               )}
-              {activatedSession && (
+
+              {activatedSession && callSession.trial && (
                 <SessionTimerTooltip
                   timeLeft={timeLeft}
                   isExtendingSession={generateSpeechmaticsSessionLoading}
                   willAutoExtend={willAutoExtend}
                   canAutoExtend={canAutoExtend}
                   trial={callSession?.trial}
-                  canExtend={callSession?.canExtend}
+                  canExtend={hasActiveSubscription}
                 />
               )}
               {activatedSession && audioTapStatus === Status.RECORDING ? (
@@ -883,61 +959,61 @@ export default function App() {
               </div>
             )}
           {!callSession && (
-            <div className="text-white bg-black/50 rounded-lg p-2 px-4 flex flex-col items-center">
+            <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Create a session in the dashboard and click "Open in Desktop App"
-              to start or{' '}
-              {!showEnterIdManually && (
-                <div
-                  onClick={() => setShowEnterIdManually(true)}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                  className="underline"
-                >
-                  Enter ID manually
-                </div>
-              )}
-              {' or '}
-              {loadingUser ? (
-                <div>loading...</div>
-              ) : !user || userError ? (
-                <div className="flex flex-row items-center gap-2 mt-2">
+              to start
+              {!showEnterIdManually && !showQuickStartInput && user && (
+                <>
+                  {' '}
+                  or{' '}
                   <Button
-                    onClick={() =>
-                      window.open(
-                        'http://localhost:3000/auth/desktop',
-                        '_blank',
-                      )
-                    }
+                    onClick={() => setShowEnterIdManually(true)}
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
+                    size="sm"
+                  >
+                    Enter Call Session ID Manually
+                  </Button>
+                </>
+              )}
+              {!showEnterIdManually && !showQuickStartInput && user && (
+                <>
+                  {' '}
+                  or{' '}
+                  <Button
+                    onClick={() => setShowQuickStartInput(true)}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    size="sm"
+                  >
+                    Quick Start Session
+                  </Button>
+                </>
+              )}
+              {loadingUser ? (
+                <span> or loading...</span>
+              ) : !user || userError ? (
+                <>
+                  {' '}
+                  or{' '}
+                  <Button
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey) {
+                        // Command/Ctrl + click to enter token manually
+                        setShowEnterTokenManually(true);
+                      } else {
+                        // Regular click to open login page
+                        window.open(`${NEXTJS_API_URL}/auth/desktop`, '_blank');
+                      }
+                    }}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    size="sm"
                   >
                     Login
                   </Button>
-                  {!showEnterTokenManually && (
-                    <Button
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave}
-                      onClick={() => setShowEnterTokenManually(true)}
-                    >
-                      Enter Token Manually
-                    </Button>
-                  )}
-                  {userError && (
-                    <Button
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave}
-                      onClick={() => refetchUser()}
-                    >
-                      Refresh
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div>{user.email}</div>
-              )}
-              {userError && (
-                <div className="mt-2">Auth error: {userError.message}</div>
-              )}
+                </>
+              ) : null}
             </div>
           )}
           {showEnterIdManually && !callSession && (
@@ -964,6 +1040,66 @@ export default function App() {
               >
                 {callSessionLoading ? 'Loading...' : 'Load'}
               </Button>
+              <Button
+                onClick={() => {
+                  setShowEnterIdManually(false);
+                  setInputCallSessionId('');
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                disabled={callSessionLoading}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+          {showQuickStartInput && !callSession && (
+            <div className="flex flex-row items-center gap-2 w-full justify-center">
+              <Input
+                placeholder="Client Name (optional)"
+                className="bg-white w-full max-w-xs"
+                value={clientName}
+                disabled={isCreatingCallSession}
+                onChange={(e) => setClientName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (!isCreatingCallSession) {
+                      createCallSession({
+                        trial: !hasActiveSubscription,
+                        clientName: clientName.trim() || undefined,
+                      });
+                    }
+                  }
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+              />
+              <Button
+                onClick={() => {
+                  if (!isCreatingCallSession) {
+                    createCallSession({
+                      trial: !hasActiveSubscription,
+                      clientName: clientName.trim() || undefined,
+                    });
+                  }
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                disabled={isCreatingCallSession}
+              >
+                {isCreatingCallSession ? 'Creating...' : 'Create'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowQuickStartInput(false);
+                  setClientName('');
+                }}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                disabled={isCreatingCallSession}
+              >
+                Cancel
+              </Button>
             </div>
           )}
           {showEnterTokenManually && userError && (
@@ -983,7 +1119,6 @@ export default function App() {
                 onMouseLeave={onMouseLeave}
               />
               <Button
-                variant="outline"
                 onClick={handleSetAuthToken}
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
@@ -998,7 +1133,6 @@ export default function App() {
                 }}
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
-                variant="outline"
               >
                 Cancel
               </Button>
@@ -1014,7 +1148,7 @@ export default function App() {
               Loading session...
             </div>
           )}
-          {callSession?.hasEnded && callSession?.trial && (
+          {callSession?.hasEnded && (
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Session has ended. Please create and start a new one in the
               dashboard.
@@ -1022,7 +1156,9 @@ export default function App() {
           )}
           {activatedSession && (
             <div className="flex flex-row items-center gap-2 mt-1 w-full justify-center">
-              {allPrompts && allPrompts.length > 0 && (
+              {isLoadingBuiltInPrompts || isLoadingRealTimePrompts ? (
+                <span>Loading prompts...</span>
+              ) : allPrompts && allPrompts.length > 0 ? (
                 <div className="flex flex-row items-center gap-2">
                   {allPrompts.map((p, index) => {
                     // Add tooltips for first and second prompts
@@ -1077,24 +1213,23 @@ export default function App() {
                       );
                     }
                   })}
+                  {builtInPrompts?.isAnalyzeScreenPromptActive && (
+                    <Button
+                      onMouseEnter={onMouseEnter}
+                      onMouseLeave={onMouseLeave}
+                      disabled={isCapturingScreenshot}
+                      size="sm"
+                      onClick={handleGenerateResponseWithScreenshot}
+                    >
+                      {isCapturingScreenshot
+                        ? 'Capturing...'
+                        : 'Analyse Screen'}
+                    </Button>
+                  )}
                 </div>
+              ) : (
+                <span className="text-white">No prompts found</span>
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
-                    disabled={isCapturingScreenshot}
-                    size="sm"
-                    onClick={handleGenerateResponseWithScreenshot}
-                  >
-                    {isCapturingScreenshot ? 'Capturing...' : 'Analyse Screen'}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="flex flex-row items-center gap-1">
-                  <ShortcutIcon /> + K
-                </TooltipContent>
-              </Tooltip>
               <div className="bg-white/50 w-px h-4" />
               <form
                 onSubmit={(e) => {

@@ -5,13 +5,11 @@ import useAudioTap, { Status } from './useAudioTap';
 import useMicrophoneTranscription from './useMicrophoneTranscription';
 import useCombinedTranscript from './useCombinedTranscript';
 import { CreateMessage, Message, useChat } from '@ai-sdk/react';
-import { CallSession, useCallSession } from './useCallSession';
 import { useMutation } from '@tanstack/react-query';
-import { useGenerateSpeechmaticsSession } from './useGenerateSpeechmaticsSession';
-import resizeImage from './resizeImage';
+import resizeImage from '../resizeImage';
 import { toast } from 'sonner';
-import { useSaveAiAnswers } from './useSaveAiAnswers';
-import { usePingSession } from './usePingSession';
+import { api, NEXTJS_API_URL, RouterOutputs } from '../trpc/react';
+import { osVersion, os } from '../useVersion';
 
 type UseSessionTranscriptionProps = {
   callSessionId: string | null;
@@ -26,7 +24,13 @@ export default function useSessionTranscription({
     data: callSession,
     isLoading: callSessionLoading,
     error: callSessionError,
-  } = useCallSession(callSessionId);
+  } = api.callSession.get.useQuery(
+    { id: callSessionId || '' },
+    {
+      enabled: !!callSessionId,
+      refetchInterval: 1000 * 5,
+    },
+  );
 
   useEffect(() => {
     if (callSessionError) {
@@ -34,15 +38,34 @@ export default function useSessionTranscription({
     }
   }, [callSessionError]);
 
+  const utils = api.useUtils();
+
   // Session mutations
   const {
-    mutateAsync: generateSpeechmaticsSession,
+    mutateAsync: _generateSpeechmaticsSession,
     isPending: generateSpeechmaticsSessionLoading,
     error: generateSpeechmaticsSessionError,
-  } = useGenerateSpeechmaticsSession(
-    version,
-    callSessionId,
-    handleSessionExtended,
+  } = api.callSession.generateSpeechmaticsSession.useMutation({
+    onSuccess: (data) => {
+      utils.callSession.get.setData({ id: data.id }, data);
+      handleSessionExtended(data);
+    },
+    onError: (error) => {
+      console.error('Error activating speechmatics session:', error);
+    },
+  });
+
+  const generateSpeechmaticsSession = useCallback(
+    async (id: string) => {
+      return _generateSpeechmaticsSession({
+        id,
+        platform: 'desktop-app',
+        osVersion,
+        version,
+        os,
+      });
+    },
+    [_generateSpeechmaticsSession],
   );
 
   useEffect(() => {
@@ -97,12 +120,12 @@ export default function useSessionTranscription({
     },
   );
 
-  const { mutate: saveAiAnswer } = useSaveAiAnswers();
-  const { mutate: pingSession } = usePingSession();
+  const { mutate: saveAiAnswer } = api.aiAnswers.save.useMutation();
+  const { mutate: pingSession } = api.callSession.ping.useMutation();
 
   // Chat functionality
   const { messages, append, stop, setMessages, status } = useChat({
-    api: 'https://www.clozerai.com/api/chat',
+    api: `${NEXTJS_API_URL}/api/chat`,
     body: {
       callSessionId: callSession?.id,
       userId: callSession?.userId,
@@ -148,8 +171,8 @@ export default function useSessionTranscription({
 
   // Session timer and expiration handling
   const [now, setTime] = useState<Date>(new Date());
-  const timeLeft = callSession?.endsAt
-    ? new Date(callSession.endsAt).getTime() - now.getTime()
+  const timeLeft = callSession?.speechmaticsTokenExpiresAt
+    ? new Date(callSession.speechmaticsTokenExpiresAt).getTime() - now.getTime()
     : null;
 
   const [hasAutoExtended, setHasAutoExtended] = useState(false);
@@ -158,12 +181,16 @@ export default function useSessionTranscription({
     setHasChatActivitySinceLastExtension,
   ] = useState(true);
 
+  const { data: user } = api.user.getUserProfile.useQuery();
+
   // Auto-extension logic
   const willAutoExtend = !!(
     callSession?.timeLeft &&
     callSession.timeLeft < 360000 &&
     !generateSpeechmaticsSessionLoading &&
-    callSession.canExtend &&
+    (user?.currentWorkspace
+      ? user.currentWorkspace.hasActiveSubscription
+      : user?.hasActiveSubscription) &&
     !callSession.trial &&
     hasChatActivitySinceLastExtension
   );
@@ -172,13 +199,17 @@ export default function useSessionTranscription({
     callSession?.timeLeft &&
     callSession.timeLeft > 360000 &&
     !generateSpeechmaticsSessionLoading &&
-    callSession.canExtend &&
+    (user?.currentWorkspace
+      ? user.currentWorkspace.hasActiveSubscription
+      : user?.hasActiveSubscription) &&
     !callSession.trial &&
     hasChatActivitySinceLastExtension
   );
 
   // Session extended handler
-  async function handleSessionExtended(newCallSession: CallSession) {
+  async function handleSessionExtended(
+    newCallSession: RouterOutputs['callSession']['get'],
+  ) {
     let speechmaticsApiKey = newCallSession?.speechmaticsApiKey!;
 
     if (audioTapStatus === Status.RECORDING) {
@@ -198,7 +229,9 @@ export default function useSessionTranscription({
     try {
       let speechmaticsApiKey = callSession.speechmaticsApiKey;
       if (!speechmaticsApiKey) {
-        const activatedCallSession = await generateSpeechmaticsSession();
+        const activatedCallSession = await generateSpeechmaticsSession(
+          callSession.id,
+        );
         speechmaticsApiKey = activatedCallSession.speechmaticsApiKey;
       }
 
@@ -220,7 +253,9 @@ export default function useSessionTranscription({
     try {
       let speechmaticsApiKey = callSession.speechmaticsApiKey;
       if (!speechmaticsApiKey) {
-        const activatedCallSession = await generateSpeechmaticsSession();
+        const activatedCallSession = await generateSpeechmaticsSession(
+          callSession.id,
+        );
         speechmaticsApiKey = activatedCallSession.speechmaticsApiKey;
       }
 
@@ -320,8 +355,7 @@ export default function useSessionTranscription({
       // Send as a new user message containing text + image
       appendAndSave({
         role: 'user',
-        content:
-          "This is a screenshot of the callee's screen. Analyze the screen and provide a useful response.",
+        content: 'Analyze the screen and provide a useful response.',
         data: { imageUrl: resizedDataUrl },
       });
     } catch (err) {
@@ -346,6 +380,30 @@ export default function useSessionTranscription({
     setMessages([]);
   }, [stop, setMessages]);
 
+  // Reset all session state - for when exiting with active session
+  const handleResetSession = useCallback(() => {
+    // Stop all recording
+    stopAudioTapRecording();
+    stopMicrophoneRecording();
+
+    // Clear all AI messages and chat
+    stop();
+    setMessages([]);
+
+    // Clear combined transcripts
+    clearCombinedTranscript();
+
+    // Clear chat input
+    setChatInput('');
+  }, [
+    stopAudioTapRecording,
+    stopMicrophoneRecording,
+    stop,
+    setMessages,
+    clearCombinedTranscript,
+    setChatInput,
+  ]);
+
   // Effects
 
   // Timer update effect
@@ -365,10 +423,16 @@ export default function useSessionTranscription({
 
   // Auto-extension logic
   useEffect(() => {
-    if (willAutoExtend && timeLeft && timeLeft < 60000 && !hasAutoExtended) {
+    if (
+      willAutoExtend &&
+      timeLeft &&
+      timeLeft < 60000 &&
+      !hasAutoExtended &&
+      !callSession.hasEnded
+    ) {
       setHasAutoExtended(true);
       if (callSession) {
-        generateSpeechmaticsSession();
+        generateSpeechmaticsSession(callSession.id);
       }
     }
   }, [
@@ -442,5 +506,8 @@ export default function useSessionTranscription({
     // Combined transcript
     combinedTranscript,
     clearTranscripts: clearCombinedTranscript,
+
+    // Session reset
+    handleResetSession,
   };
 }

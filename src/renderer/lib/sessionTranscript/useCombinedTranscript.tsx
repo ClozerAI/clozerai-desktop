@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useSaveTranscript } from './useSaveTranscript';
+import { api } from '../trpc/react';
 
 export type TranscriptEntry = {
   finalTranscript: string;
@@ -15,14 +15,14 @@ const updateTimeThreshold = 2500;
 const createTimeThreshold = 60000;
 
 export default function useCombinedTranscript(
-  callSessionId?: string,
-  saveTranscript: boolean = true,
+  callSessionId: string | undefined,
+  saveTranscript: boolean | undefined,
 ) {
   const [combinedTranscript, setCombinedTranscript] = useState<
     TranscriptEntry[]
   >([]);
 
-  const { mutate: saveMutation } = useSaveTranscript();
+  const { mutate: saveMutation } = api.transcription.save.useMutation();
 
   // Save unsaved transcripts to the database
   const saveUnsavedTranscripts = useCallback(
@@ -39,15 +39,17 @@ export default function useCombinedTranscript(
       );
 
       if (unsavedTranscripts.length > 0 && callSessionId) {
-        saveMutation({
-          callSessionId,
-          transcripts: unsavedTranscripts.map((entry) => ({
-            finalTranscript: entry.finalTranscript,
-            type: entry.type,
-            lastUpdated: entry.lastUpdated,
-            createdAt: entry.createdAt,
-          })),
-        });
+        if (saveTranscript) {
+          saveMutation({
+            callSessionId,
+            transcripts: unsavedTranscripts.map((entry) => ({
+              finalTranscript: entry.finalTranscript,
+              type: entry.type,
+              lastUpdated: entry.lastUpdated,
+              createdAt: entry.createdAt,
+            })),
+          });
+        }
 
         // Mark as saved in local state
         setCombinedTranscript((prev) =>

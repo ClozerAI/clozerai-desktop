@@ -1,4 +1,4 @@
-import { Status } from '@/renderer/lib/useAudioTap';
+import { Status } from '@/renderer/lib/sessionTranscript/useAudioTap';
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels =
@@ -14,7 +14,6 @@ export type Channels =
   | 'ipc-toggle-hide'
   | 'ipc-answer-question'
   | 'ipc-what-to-ask'
-  | 'ipc-analyse-screen'
   | 'ipc-load-session'
   | 'ipc-store-auth-token'
   | 'ipc-move-window-left'

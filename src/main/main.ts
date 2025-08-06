@@ -22,10 +22,11 @@ import { resolveHtmlPath } from './util';
 import getAssetPath from './getAssetPath';
 import { startAudioTapMac } from './audioTap/audioTapMac';
 import { startAudioTapWin } from './audioTap/audioTapWin';
-import { Status } from '@/renderer/lib/useAudioTap';
+import { Status } from '@/renderer/lib/sessionTranscript/useAudioTap';
 import screenshot from 'screenshot-desktop';
 import { AudioTapResult } from './audioTap/audioTapBase';
 import { WebSocket } from 'ws';
+import { NEXTJS_API_URL } from '@/renderer/lib/trpc/react';
 
 // Make WebSocket available globally
 (global as any).WebSocket = WebSocket;
@@ -68,29 +69,21 @@ function setNextAuthCookie(authToken: string) {
   }
 
   // NOTE: When packaging for production change the URL to your production API
-  const cookieUrl = 'http://localhost:3000';
 
-  mainWindow.webContents.session.cookies
-    .set({
-      url: cookieUrl,
-      name: 'next-auth.session-token',
-      value: authToken,
-      domain: new URL(cookieUrl).hostname,
-      path: '/',
-      // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
-      secure: true,
-      httpOnly: false,
-      // The renderer is served from the file:// protocol which is cross-site
-      // with respect to http://localhost:3000. To make sure the cookie is
-      // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
-      sameSite: 'no_restriction',
-    })
-    .then(() => {
-      console.log('✅ Cookie set successfully for NextAuth');
-    })
-    .catch((error) => {
-      console.error('❌ Error setting NextAuth cookie:', error);
-    });
+  mainWindow.webContents.session.cookies.set({
+    url: NEXTJS_API_URL,
+    name: 'next-auth.session-token',
+    value: authToken,
+    domain: new URL(NEXTJS_API_URL).hostname,
+    path: '/',
+    // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
+    secure: true,
+    httpOnly: false,
+    // The renderer is served from the file:// protocol which is cross-site
+    // with respect to http://localhost:3000. To make sure the cookie is
+    // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
+    sameSite: 'no_restriction',
+  });
 }
 
 // One-way command handlers (keep as .on)
@@ -226,9 +219,6 @@ ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
 // Add manual auth token handler
 ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
   try {
-    if (!authToken) {
-      throw new Error('Auth token is required');
-    }
     setNextAuthCookie(authToken);
     console.log('Auth token set successfully via manual input');
     return true;
@@ -485,12 +475,6 @@ app.whenReady().then(async () => {
       }
     });
 
-    globalShortcut.register('Command+K', () => {
-      if (mainWindow) {
-        mainWindow.webContents.send('ipc-analyse-screen');
-      }
-    });
-
     globalShortcut.register('Command+Backspace', () => {
       if (mainWindow) {
         mainWindow.webContents.send('ipc-clear-messages');
@@ -525,12 +509,6 @@ app.whenReady().then(async () => {
     globalShortcut.register('Ctrl+G', () => {
       if (mainWindow) {
         mainWindow.webContents.send('ipc-what-to-ask');
-      }
-    });
-
-    globalShortcut.register('Ctrl+K', () => {
-      if (mainWindow) {
-        mainWindow.webContents.send('ipc-analyse-screen');
       }
     });
 

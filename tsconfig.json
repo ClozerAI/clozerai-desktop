@@ -14,6 +14,7 @@
     "allowJs": true,
     "outDir": ".erb/dll",
     "paths": {
+      "@nextjs-types/*": ["../clozerai-nextjs/dist/*"],
       "@/*": ["./src/*"]
     }
   },
