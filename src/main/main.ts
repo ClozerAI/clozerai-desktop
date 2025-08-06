@@ -244,7 +244,6 @@ ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
 ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
   try {
     setNextAuthCookie(authToken);
-    console.log('Auth token set successfully via manual input');
     return true;
   } catch (error) {
     console.error('Error setting auth token:', error);

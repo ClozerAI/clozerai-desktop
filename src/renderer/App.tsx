@@ -52,6 +52,8 @@ export default function App() {
     retry: false,
   });
 
+  const loggedIn = user && !userError;
+
   const hasActiveSubscription =
     (user?.currentWorkspace
       ? user.currentWorkspace.hasActiveSubscription
@@ -141,7 +143,7 @@ export default function App() {
 
   const { data: builtInPrompts, isLoading: isLoadingBuiltInPrompts } =
     api.realTimePrompts.getBuiltInPrompts.useQuery(undefined, {
-      enabled: !!user,
+      enabled: !!loggedIn,
     });
 
   const { data: realTimePromptsResponse, isLoading: isLoadingRealTimePrompts } =
@@ -151,7 +153,7 @@ export default function App() {
         offset: 0,
       },
       {
-        enabled: !!user,
+        enabled: !!loggedIn,
       },
     );
 
@@ -208,8 +210,6 @@ export default function App() {
     try {
       // Clear the auth token by storing an empty string
       await window.electron?.ipcRenderer.storeAuthToken('');
-      // Refetch user data to update the UI state
-      refetchUser();
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -783,7 +783,7 @@ export default function App() {
                       Dashboard
                     </Button>
                   </a>
-                  {user && (
+                  {loggedIn && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -796,8 +796,8 @@ export default function App() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        {user.email} (
-                        {user.currentWorkspace?.name || 'Personal'})
+                        {user?.email} (
+                        {user?.currentWorkspace?.name || 'Personal'})
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -981,7 +981,7 @@ export default function App() {
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Create a session in the dashboard and click "Open in Desktop App"
               to start
-              {!showEnterIdManually && !showQuickStartInput && user && (
+              {!showEnterIdManually && !showQuickStartInput && loggedIn && (
                 <>
                   {' '}
                   or{' '}
@@ -995,7 +995,7 @@ export default function App() {
                   </Button>
                 </>
               )}
-              {!showEnterIdManually && !showQuickStartInput && user && (
+              {!showEnterIdManually && !showQuickStartInput && loggedIn && (
                 <>
                   {' '}
                   or{' '}
@@ -1011,7 +1011,7 @@ export default function App() {
               )}
               {loadingUser ? (
                 <span> or loading...</span>
-              ) : !user || userError ? (
+              ) : !loggedIn ? (
                 <>
                   {' '}
                   or{' '}
