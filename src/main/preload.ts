@@ -24,7 +24,8 @@ export type Channels =
   | 'ipc-toggle-content-protection'
   | 'ipc-toggle-privacy'
   | 'ipc-clear-messages'
-  | 'ipc-write-clipboard';
+  | 'ipc-write-clipboard'
+  | 'ipc-auth-cookie-updated';
 
 const electronHandler = {
   ipcRenderer: {

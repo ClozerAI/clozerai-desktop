@@ -331,6 +331,25 @@ export default function App() {
     };
   }, [setCallSessionId, setInputCallSessionId, setHideAndResize]);
 
+  // Add new useEffect for auth cookie updates
+  useEffect(() => {
+    if (!window.electron?.ipcRenderer) return;
+
+    const authCookieUpdatedHandler = () => {
+      console.log('Auth cookie updated, refetching user data');
+      refetchUser();
+    };
+
+    const unsubscribeAuthCookieUpdated = window.electron.ipcRenderer.on(
+      'ipc-auth-cookie-updated',
+      authCookieUpdatedHandler,
+    );
+
+    return () => {
+      unsubscribeAuthCookieUpdated();
+    };
+  }, [refetchUser]);
+
   // Add state for tracking logo clicks and content protection
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [contentProtectionDisabled, setContentProtectionDisabled] =

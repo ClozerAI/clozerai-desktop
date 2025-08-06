@@ -72,7 +72,10 @@ function setNextAuthCookie(authToken: string) {
 
   mainWindow.webContents.session.cookies.set({
     url: NEXTJS_API_URL,
-    name: 'next-auth.session-token',
+    name:
+      process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
     value: authToken,
     domain: new URL(NEXTJS_API_URL).hostname,
     path: '/',
@@ -84,6 +87,9 @@ function setNextAuthCookie(authToken: string) {
     // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
     sameSite: 'no_restriction',
   });
+
+  // Notify the renderer that the auth cookie has been updated
+  mainWindow.webContents.send('ipc-auth-cookie-updated');
 }
 
 // One-way command handlers (keep as .on)
