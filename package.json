@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.12",
+    "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@speechmatics/real-time-client": "^6.0.0",

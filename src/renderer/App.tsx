@@ -31,6 +31,17 @@ import useSessionTranscription from './lib/sessionTranscript/useSessionTranscrip
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 import ChatMessage from './components/ChatMessage';
 import { api, NEXTJS_API_URL } from './lib/trpc/react';
+import transcriptionLanguageMap, {
+  TranscriptionLanguage,
+} from './lib/transcriptLanguageMap';
+import { DEFAULT_LANGUAGE } from './lib/callSessionDefaults';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './components/ui/select';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -87,6 +98,8 @@ export default function App() {
   // Quick Start Session client name state
   const [showQuickStartInput, setShowQuickStartInput] = useState(false);
   const [clientName, setClientName] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<TranscriptionLanguage>(DEFAULT_LANGUAGE);
 
   // Manual auth token state
   const [showEnterTokenManually, setShowEnterTokenManually] = useState(false);
@@ -158,6 +171,22 @@ export default function App() {
     );
 
   const realTimePrompts = realTimePromptsResponse?.data ?? [];
+
+  // Fetch last session to prefill language
+  const { data: lastSessions, isLoading: isLoadingLastSessions } =
+    api.callSession.getMany.useQuery(
+      { limit: 1, offset: 0 },
+      { enabled: !!loggedIn },
+    );
+
+  useEffect(() => {
+    const lastLang = lastSessions?.data?.[0]?.language as
+      | TranscriptionLanguage
+      | undefined;
+    if (lastLang) {
+      setSelectedLanguage(lastLang);
+    }
+  }, [lastSessions?.data?.[0]?.language]);
 
   const allPrompts = [
     ...(realTimePrompts || []).map((p) => ({
@@ -1117,7 +1146,7 @@ export default function App() {
             <div className="flex flex-row items-center gap-2 w-full justify-center">
               <Input
                 placeholder="Client Name (optional)"
-                className="bg-white w-full max-w-xs"
+                className="bg-white w-full max-w-2xs"
                 value={clientName}
                 disabled={isCreatingCallSession}
                 onChange={(e) => setClientName(e.target.value)}
@@ -1127,6 +1156,7 @@ export default function App() {
                       createCallSession({
                         trial: !hasActiveSubscription,
                         clientName: clientName.trim() || undefined,
+                        language: selectedLanguage,
                       });
                     }
                   }
@@ -1134,12 +1164,38 @@ export default function App() {
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
               />
+              <Select
+                value={selectedLanguage}
+                onValueChange={(value) =>
+                  setSelectedLanguage(value as TranscriptionLanguage)
+                }
+                disabled={isCreatingCallSession || isLoadingLastSessions}
+              >
+                <SelectTrigger
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  className="bg-white text-black"
+                >
+                  <SelectValue placeholder="Select language..." />
+                </SelectTrigger>
+                <SelectContent
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                >
+                  {Object.values(TranscriptionLanguage).map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {transcriptionLanguageMap[lang]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => {
                   if (!isCreatingCallSession) {
                     createCallSession({
                       trial: !hasActiveSubscription,
                       clientName: clientName.trim() || undefined,
+                      language: selectedLanguage,
                     });
                   }
                 }}
