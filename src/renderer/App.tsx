@@ -221,6 +221,7 @@ export default function App() {
       handleResetSession();
       setCallSessionId(null);
       setInputCallSessionId('');
+      setHideAndResize(false);
     } else {
       // If no active session, quit the app
       window.electron?.ipcRenderer.quitApp();
@@ -564,7 +565,7 @@ export default function App() {
           <div className="flex flex-col w-full justify-center items-center gap-1">
             <div className="flex flex-row justify-between w-full h-full">
               <div className="flex flex-row justify-center gap-2">
-                <img width="102" alt="icon" src={icon} />
+                <img width="32" alt="icon" src={iconNoText} />
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -584,6 +585,46 @@ export default function App() {
                     <ShortcutIcon /> + E
                   </TooltipContent>
                 </Tooltip>
+                {audioTapStatus === Status.RECORDING && (
+                  <Button
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    size="sm"
+                    onClick={() => setHideAndResize(false)}
+                    className="flex flex-row items-center gap-2"
+                  >
+                    <Laptop className="w-4 h-4" />
+                    <span
+                      className={cn(
+                        'h-3 w-3 rounded-full bg-red-500 shadow-lg',
+                        'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
+                        'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
+                        'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
+                      )}
+                    />
+                  </Button>
+                )}
+                {/* Recording indicator - show when microphone is recording */}
+                {isRecordingMicrophone && (
+                  <Button
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    size="sm"
+                    onClick={() => setHideAndResize(false)}
+                    className="flex flex-row items-center gap-2"
+                  >
+                    <Mic className="w-4 h-4" />
+                    <span
+                      className={cn(
+                        'h-3 w-3 rounded-full bg-red-500 shadow-lg',
+                        'animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite]',
+                        'before:-ml-1.5 before:absolute before:h-3 before:w-3 before:rounded-full before:bg-red-500/50',
+                        'before:animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]',
+                      )}
+                    />
+                  </Button>
+                )}
+
                 <Button
                   variant="destructive"
                   size="sm"

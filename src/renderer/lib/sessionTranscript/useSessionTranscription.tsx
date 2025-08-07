@@ -451,18 +451,20 @@ export default function useSessionTranscription({
 
   // Ping system: send ping every 15 seconds when session is active
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!callSession || callSession.hasEnded || !callSession.activatedAt) {
-        return;
-      }
+    if (!callSession || callSession.hasEnded || !callSession.activatedAt) {
+      return;
+    }
 
+    pingSession({ callSessionId: callSession.id });
+
+    const interval = setInterval(() => {
       pingSession({ callSessionId: callSession.id });
     }, 15000); // 15 seconds
 
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [callSession]);
 
   return {
     // Call session data
