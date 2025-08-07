@@ -28,7 +28,7 @@ export default function useSessionTranscription({
     { id: callSessionId || '' },
     {
       enabled: !!callSessionId,
-      refetchInterval: 1000 * 5,
+      refetchInterval: 15000,
     },
   );
 
@@ -451,18 +451,18 @@ export default function useSessionTranscription({
 
   // Ping system: send ping every 15 seconds when session is active
   useEffect(() => {
-    if (!callSession || callSession.hasEnded || !callSession.activatedAt) {
-      return;
-    }
-
     const interval = setInterval(() => {
+      if (!callSession || callSession.hasEnded || !callSession.activatedAt) {
+        return;
+      }
+
       pingSession({ callSessionId: callSession.id });
     }, 15000); // 15 seconds
 
     return () => {
       clearInterval(interval);
     };
-  }, [callSession, pingSession]);
+  }, []);
 
   return {
     // Call session data
