@@ -28,6 +28,10 @@ import { AudioTapResult } from './audioTap/audioTapBase';
 import { WebSocket } from 'ws';
 import { NEXTJS_API_URL } from '@/renderer/lib/trpc/react';
 
+// Configure electron-log for main process
+log.transports.file.level = 'info';
+log.transports.console.level = 'info';
+
 // Make WebSocket available globally
 (global as any).WebSocket = WebSocket;
 
@@ -52,32 +56,32 @@ class AppUpdater {
 
   private setupEventListeners() {
     autoUpdater.on('checking-for-update', () => {
-      console.log('Checking for update...');
+      log.info('Checking for update...');
       mainWindow?.webContents.send('ipc-update-checking');
     });
 
     autoUpdater.on('update-available', (info) => {
-      console.log('Update available:', info);
+      log.info('Update available:', info);
       mainWindow?.webContents.send('ipc-update-available', info);
     });
 
     autoUpdater.on('update-not-available', (info) => {
-      console.log('Update not available:', info);
+      log.info('Update not available:', info);
       mainWindow?.webContents.send('ipc-update-not-available', info);
     });
 
     autoUpdater.on('error', (err) => {
-      console.log('Error in auto-updater:', err);
+      log.error('Error in auto-updater:', err);
       mainWindow?.webContents.send('ipc-update-error', err.message);
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
-      console.log('Download progress:', progressObj);
+      log.info('Download progress:', progressObj);
       mainWindow?.webContents.send('ipc-update-download-progress', progressObj);
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-      console.log('Update downloaded:', info);
+      log.info('Update downloaded:', info);
       mainWindow?.webContents.send('ipc-update-downloaded', info);
     });
   }
@@ -98,52 +102,65 @@ let initialProtocolUrl: string | null = null;
 
 // Helper to persist the NextAuth session cookie so that subsequent fetch
 // requests from the renderer include proper authentication
-function setNextAuthCookie(authToken: string) {
+async function setNextAuthCookie(authToken: string) {
   if (!mainWindow) {
-    console.error('Cannot set auth cookie – mainWindow not ready yet');
+    log.error('Cannot set auth cookie – mainWindow not ready yet');
     return;
   }
+
+  log.info(
+    'Setting auth cookie for token:',
+    authToken.substring(0, 20) + '...',
+  );
 
   // Set expiration date to 30 days from now (in seconds since UNIX epoch)
   const expirationDate = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
-  mainWindow.webContents.session.cookies.set({
-    url: NEXTJS_API_URL,
-    name: '__Secure-next-auth.session-token',
-    value: authToken,
-    domain: new URL(NEXTJS_API_URL).hostname,
-    path: '/',
-    // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
-    secure: true,
-    httpOnly: false,
-    // The renderer is served from the file:// protocol which is cross-site
-    // with respect to http://localhost:3000. To make sure the cookie is
-    // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
-    sameSite: 'no_restriction',
-    expirationDate: expirationDate,
-  });
+  try {
+    await mainWindow.webContents.session.cookies.set({
+      url: NEXTJS_API_URL,
+      name: '__Secure-next-auth.session-token',
+      value: authToken,
+      domain: new URL(NEXTJS_API_URL).hostname,
+      path: '/',
+      // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
+      secure: true,
+      httpOnly: false,
+      // The renderer is served from the file:// protocol which is cross-site
+      // with respect to http://localhost:3000. To make sure the cookie is
+      // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
+      sameSite: 'no_restriction',
+      expirationDate: expirationDate,
+    });
 
-  mainWindow.webContents.session.cookies.set({
-    url: NEXTJS_API_URL,
-    name: 'next-auth.session-token',
-    value: authToken,
-    domain: new URL(NEXTJS_API_URL).hostname,
-    path: '/',
-    // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
-    secure: true,
-    httpOnly: false,
-    // The renderer is served from the file:// protocol which is cross-site
-    // with respect to http://localhost:3000. To make sure the cookie is
-    // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
-    sameSite: 'no_restriction',
-    expirationDate: expirationDate,
-  });
+    await mainWindow.webContents.session.cookies.set({
+      url: NEXTJS_API_URL,
+      name: 'next-auth.session-token',
+      value: authToken,
+      domain: new URL(NEXTJS_API_URL).hostname,
+      path: '/',
+      // For SameSite=None, secure must be true. Localhost is considered secure even over HTTP
+      secure: true,
+      httpOnly: false,
+      // The renderer is served from the file:// protocol which is cross-site
+      // with respect to http://localhost:3000. To make sure the cookie is
+      // sent with XHR/fetch requests we need SameSite=None -> 'no_restriction'.
+      sameSite: 'no_restriction',
+      expirationDate: expirationDate,
+    });
 
-  // Force write cookies to disk immediately
-  mainWindow.webContents.session.cookies.flushStore();
+    log.info('Auth cookies set successfully');
 
-  // Notify the renderer that the auth cookie has been updated
-  mainWindow.webContents.send('ipc-auth-cookie-updated');
+    // Force write cookies to disk immediately
+    await mainWindow.webContents.session.cookies.flushStore();
+    log.info('Cookies flushed to disk');
+
+    // Notify the renderer that the auth cookie has been updated
+    mainWindow.webContents.send('ipc-auth-cookie-updated');
+    log.info('Auth cookie update notification sent to renderer');
+  } catch (error) {
+    log.error('Error setting auth cookies:', error);
+  }
 }
 
 // One-way command handlers (keep as .on)
@@ -161,14 +178,14 @@ ipcMain.handle(
   async (_, speechmaticsApiKey, language) => {
     // Always cleanup any existing instance first to prevent conflicts
     if (audioTapInstance) {
-      console.log(
+      log.info(
         'Cleaning up existing audio tap instance before starting new one',
       );
       try {
         await audioTapInstance.cleanup();
-        console.log('Existing audio tap cleanup completed');
+        log.info('Existing audio tap cleanup completed');
       } catch (error) {
-        console.error('Error during audio tap cleanup:', error);
+        log.error('Error during audio tap cleanup:', error);
       }
       audioTapInstance = null;
     }
@@ -212,7 +229,7 @@ ipcMain.handle(
 
       return Status.RECORDING;
     } catch (error) {
-      console.log('Error starting audio tap', error);
+      log.error('Error starting audio tap', error);
       throw error;
     }
   },
@@ -221,11 +238,11 @@ ipcMain.handle(
 ipcMain.handle('ipc-stop-audio-tap', async (_) => {
   if (audioTapInstance) {
     try {
-      console.log('Stopping audio tap...');
+      log.info('Stopping audio tap...');
       await audioTapInstance.cleanup();
-      console.log('Audio tap stopped successfully');
+      log.info('Audio tap stopped successfully');
     } catch (error) {
-      console.error('Error stopping audio tap:', error);
+      log.error('Error stopping audio tap:', error);
     }
     audioTapInstance = null;
   }
@@ -245,7 +262,7 @@ ipcMain.handle('ipc-capture-screenshot', async () => {
 
     return dataUrl;
   } catch (error) {
-    console.log('Error listening screenshot:', error);
+    log.error('Error listening screenshot:', error);
     throw error;
   }
 });
@@ -254,7 +271,7 @@ ipcMain.handle('ipc-capture-screenshot', async () => {
 ipcMain.on('ipc-toggle-content-protection', (_, disabled: boolean) => {
   if (mainWindow) {
     mainWindow.setContentProtection(!disabled);
-    console.log(`Content protection ${disabled ? 'disabled' : 'enabled'}`);
+    log.info(`Content protection ${disabled ? 'disabled' : 'enabled'}`);
   }
 });
 
@@ -269,9 +286,9 @@ ipcMain.on('ipc-toggle-privacy', (_, isPrivate: boolean) => {
 ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
   try {
     clipboard.writeText(text);
-    console.log('Text written to clipboard successfully');
+    log.info('Text written to clipboard successfully');
   } catch (error) {
-    console.error('Error writing to clipboard:', error);
+    log.error('Error writing to clipboard:', error);
     throw error;
   }
 });
@@ -279,10 +296,10 @@ ipcMain.handle('ipc-write-clipboard', async (_, text: string) => {
 // Add manual auth token handler
 ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
   try {
-    setNextAuthCookie(authToken);
+    await setNextAuthCookie(authToken);
     return true;
   } catch (error) {
-    console.error('Error setting auth token:', error);
+    log.error('Error setting auth token:', error);
     throw error;
   }
 });
@@ -292,7 +309,7 @@ ipcMain.handle('ipc-check-for-updates', async () => {
   try {
     return await autoUpdater.checkForUpdatesAndNotify();
   } catch (error) {
-    console.error('Error checking for updates:', error);
+    log.error('Error checking for updates:', error);
     throw error;
   }
 });
@@ -301,7 +318,7 @@ ipcMain.handle('ipc-install-update', async () => {
   try {
     autoUpdater.quitAndInstall();
   } catch (error) {
-    console.error('Error installing update:', error);
+    log.error('Error installing update:', error);
     throw error;
   }
 });
@@ -328,70 +345,106 @@ const installExtensions = async () => {
       extensions.map((name) => installer[name]),
       forceDownload,
     )
-    .catch(console.log);
+    .catch(log.error);
 };
 
 // Handle protocol URL (extract into a function for reuse)
-function handleProtocolUrl(url: string) {
-  console.log('Received protocol URL:', url);
+async function handleProtocolUrl(url: string) {
+  log.info('Received protocol URL:', url);
 
   const prefix = 'clozerai://';
   if (!url.startsWith(prefix)) {
-    console.log('Invalid protocol');
+    log.info('Invalid protocol');
     return;
   }
 
   const urlWithoutPrefix = url.replace(prefix, '');
-  console.log('URL without prefix:', urlWithoutPrefix);
+  log.info('URL without prefix:', urlWithoutPrefix);
 
   // Parse the URL to extract path and query parameters
   const [path, queryString] = urlWithoutPrefix.split('?');
-  const params = new URLSearchParams(queryString || '');
+
+  // On Windows, command line arguments might have URL encoding issues
+  // Decode the query string to ensure proper parsing
+  const decodedQueryString = queryString ? decodeURIComponent(queryString) : '';
+  log.info('Decoded query string:', decodedQueryString);
+
+  const params = new URLSearchParams(decodedQueryString);
 
   if (path === 'auth') {
     // Handle auth URL: clozerai://auth?payload=...
     const payload = params.get('payload');
+    log.info('Extracted payload:', payload);
     if (payload) {
       try {
+        // The payload might still be URL-encoded, so decode it if needed
+        let decodedPayload = payload;
+        try {
+          // Try to decode if it's still URL-encoded
+          const testDecode = decodeURIComponent(payload);
+          if (testDecode !== payload) {
+            decodedPayload = testDecode;
+            log.info('Further decoded payload:', decodedPayload);
+          }
+        } catch (e) {
+          // If decoding fails, use original payload
+          log.info('Payload does not need further decoding');
+        }
+
         const decoded = JSON.parse(
-          Buffer.from(payload, 'base64').toString('utf8'),
+          Buffer.from(decodedPayload, 'base64').toString('utf8'),
         );
         const authToken: string | undefined = decoded.authToken;
         if (authToken) {
-          console.log('Received auth token from protocol');
+          log.info('Received auth token from protocol');
           if (mainWindow) {
             if (mainWindow.isMinimized()) {
               mainWindow.restore();
             }
             mainWindow.focus();
             // Set cookies ...
-            setNextAuthCookie(authToken);
+            await setNextAuthCookie(authToken);
           } else {
             // Store the URL to handle it once the main window is ready
             initialProtocolUrl = url;
           }
         } else {
-          console.log('No auth token found in auth payload');
+          log.info('No auth token found in auth payload');
         }
       } catch (e) {
-        console.error('Invalid payload in auth protocol URL:', e);
+        log.error('Invalid payload in auth protocol URL:', e);
       }
     } else {
-      console.log('Missing payload in auth URL');
+      log.info('Missing payload in auth URL');
     }
   } else if (path === 'session') {
     // Handle session URL: clozerai://session?payload=...
     const payload = params.get('payload');
+    log.info('Extracted session payload:', payload);
     if (payload) {
       try {
+        // The payload might still be URL-encoded, so decode it if needed
+        let decodedPayload = payload;
+        try {
+          // Try to decode if it's still URL-encoded
+          const testDecode = decodeURIComponent(payload);
+          if (testDecode !== payload) {
+            decodedPayload = testDecode;
+            log.info('Further decoded session payload:', decodedPayload);
+          }
+        } catch (e) {
+          // If decoding fails, use original payload
+          log.info('Session payload does not need further decoding');
+        }
+
         const decoded = JSON.parse(
-          Buffer.from(payload, 'base64').toString('utf8'),
+          Buffer.from(decodedPayload, 'base64').toString('utf8'),
         );
         const callSessionId: string | undefined = decoded.callSessionId;
         const authToken: string | undefined = decoded.authToken;
 
         if (callSessionId && authToken) {
-          console.log(
+          log.info(
             'Received session ID and auth token from protocol:',
             callSessionId,
           );
@@ -401,30 +454,30 @@ function handleProtocolUrl(url: string) {
             }
             mainWindow.focus();
             // Set cookies ...
-            setNextAuthCookie(authToken);
+            await setNextAuthCookie(authToken);
             mainWindow.webContents.send('ipc-load-session', callSessionId);
           } else {
             // Store the URL to handle it once the main window is ready
             initialProtocolUrl = url;
           }
         } else {
-          console.log('Missing callSessionId or authToken in session payload');
+          log.info('Missing callSessionId or authToken in session payload');
         }
       } catch (e) {
-        console.error('Invalid payload in session protocol URL:', e);
+        log.error('Invalid payload in session protocol URL:', e);
       }
     } else {
-      console.log('Missing payload in session URL');
+      log.info('Missing payload in session URL');
     }
   } else {
-    console.log('Invalid path in protocol URL:', path);
+    log.info('Invalid path in protocol URL:', path);
   }
 }
 
 // Register the open-url event listener BEFORE app.whenReady()
-app.on('open-url', (event, url) => {
+app.on('open-url', async (event, url) => {
   event.preventDefault();
-  handleProtocolUrl(url);
+  await handleProtocolUrl(url);
 });
 
 // Prevent multiple instances
@@ -433,12 +486,12 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', (_event, argv, _workingDirectory) => {
+  app.on('second-instance', async (_event, argv, _workingDirectory) => {
     // On Windows, protocol URLs are passed in argv
     if (isWindows) {
       const protocolArg = argv.find((arg) => arg.startsWith('clozerai://'));
       if (protocolArg) {
-        handleProtocolUrl(protocolArg);
+        await handleProtocolUrl(protocolArg);
       }
     }
     // Someone tried to run a second instance, focus the main window.
@@ -451,9 +504,16 @@ if (!gotTheLock) {
 
 if (isWindows) {
   // process.argv[0] is the executable, process.argv[1] is the first argument
+  log.info(
+    'Windows detected, checking process.argv for protocol URL:',
+    process.argv,
+  );
   const protocolArg = process.argv.find((arg) => arg.startsWith('clozerai://'));
   if (protocolArg) {
+    log.info('Found protocol URL in process.argv:', protocolArg);
     initialProtocolUrl = protocolArg;
+  } else {
+    log.info('No protocol URL found in process.argv');
   }
 }
 
@@ -523,7 +583,7 @@ const createWindow = async () => {
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
-  mainWindow.on('ready-to-show', () => {
+  mainWindow.on('ready-to-show', async () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
@@ -532,7 +592,7 @@ const createWindow = async () => {
 
     // Handle any stored protocol URL after the window is ready
     if (initialProtocolUrl) {
-      handleProtocolUrl(initialProtocolUrl);
+      await handleProtocolUrl(initialProtocolUrl);
       initialProtocolUrl = null;
     }
   });
