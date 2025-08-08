@@ -43,7 +43,43 @@ class AppUpdater {
       repo: 'clozerai-desktop-releases',
     });
 
+    // Set up event listeners
+    this.setupEventListeners();
+
+    // Check for updates automatically
     autoUpdater.checkForUpdatesAndNotify();
+  }
+
+  private setupEventListeners() {
+    autoUpdater.on('checking-for-update', () => {
+      console.log('Checking for update...');
+      mainWindow?.webContents.send('ipc-update-checking');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+      console.log('Update available:', info);
+      mainWindow?.webContents.send('ipc-update-available', info);
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+      console.log('Update not available:', info);
+      mainWindow?.webContents.send('ipc-update-not-available', info);
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.log('Error in auto-updater:', err);
+      mainWindow?.webContents.send('ipc-update-error', err.message);
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      console.log('Download progress:', progressObj);
+      mainWindow?.webContents.send('ipc-update-download-progress', progressObj);
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      console.log('Update downloaded:', info);
+      mainWindow?.webContents.send('ipc-update-downloaded', info);
+    });
   }
 }
 
@@ -247,6 +283,25 @@ ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
     return true;
   } catch (error) {
     console.error('Error setting auth token:', error);
+    throw error;
+  }
+});
+
+// Add update handlers
+ipcMain.handle('ipc-check-for-updates', async () => {
+  try {
+    return await autoUpdater.checkForUpdatesAndNotify();
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('ipc-install-update', async () => {
+  try {
+    autoUpdater.quitAndInstall();
+  } catch (error) {
+    console.error('Error installing update:', error);
     throw error;
   }
 });

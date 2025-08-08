@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Download,
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
@@ -389,6 +390,16 @@ export default function App() {
   // Add state for privacy mode (default to private)
   const [isPrivate, setIsPrivate] = useState(true);
 
+  // Add update state
+  const [updateStatus, setUpdateStatus] = useState<
+    'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
+  >('idle');
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    percent: number;
+  } | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   // Add function to handle logo clicks
   const handleLogoClick = (event: React.MouseEvent<HTMLImageElement>) => {
     // Only proceed if Command key is held
@@ -443,6 +454,89 @@ export default function App() {
     if (window.electron?.ipcRenderer) {
       window.electron.ipcRenderer.sendMessage('ipc-toggle-privacy', true);
     }
+  }, []);
+
+  // Add update event listeners
+  useEffect(() => {
+    if (!window.electron?.ipcRenderer) return;
+
+    const updateCheckingHandler = () => {
+      setUpdateStatus('checking');
+      setUpdateError(null);
+    };
+
+    const updateAvailableHandler = (...args: unknown[]) => {
+      const updateInfo = args[0];
+      setUpdateStatus('available');
+      setUpdateInfo(updateInfo);
+      setUpdateError(null);
+    };
+
+    const updateNotAvailableHandler = () => {
+      setUpdateStatus('idle');
+      setUpdateInfo(null);
+      setUpdateError(null);
+    };
+
+    const updateErrorHandler = (...args: unknown[]) => {
+      const error = args[0] as string;
+      setUpdateStatus('error');
+      setUpdateError(error);
+    };
+
+    const updateDownloadProgressHandler = (...args: unknown[]) => {
+      const progress = args[0];
+      setUpdateStatus('downloading');
+      setDownloadProgress(progress as { percent: number });
+      setUpdateError(null);
+    };
+
+    const updateDownloadedHandler = (...args: unknown[]) => {
+      const info = args[0];
+      setUpdateStatus('downloaded');
+      setUpdateInfo(info);
+      setDownloadProgress(null);
+      setUpdateError(null);
+    };
+
+    const unsubscribeUpdateChecking = window.electron.ipcRenderer.on(
+      'ipc-update-checking',
+      updateCheckingHandler,
+    );
+
+    const unsubscribeUpdateAvailable = window.electron.ipcRenderer.on(
+      'ipc-update-available',
+      updateAvailableHandler,
+    );
+
+    const unsubscribeUpdateNotAvailable = window.electron.ipcRenderer.on(
+      'ipc-update-not-available',
+      updateNotAvailableHandler,
+    );
+
+    const unsubscribeUpdateError = window.electron.ipcRenderer.on(
+      'ipc-update-error',
+      updateErrorHandler,
+    );
+
+    const unsubscribeUpdateDownloadProgress = window.electron.ipcRenderer.on(
+      'ipc-update-download-progress',
+      updateDownloadProgressHandler,
+    );
+
+    const unsubscribeUpdateDownloaded = window.electron.ipcRenderer.on(
+      'ipc-update-downloaded',
+      updateDownloadedHandler,
+    );
+
+    return () => {
+      unsubscribeUpdateChecking();
+      unsubscribeUpdateAvailable();
+      unsubscribeUpdateNotAvailable();
+      unsubscribeUpdateError();
+      unsubscribeUpdateDownloadProgress();
+      unsubscribeUpdateDownloaded();
+    };
   }, []);
 
   // Add state for assistant message navigation
@@ -511,6 +605,22 @@ export default function App() {
       'ipc-toggle-privacy',
       newPrivacyState,
     );
+  }
+
+  async function handleCheckForUpdates() {
+    try {
+      await window.electron?.ipcRenderer.checkForUpdates();
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+    }
+  }
+
+  async function handleInstallUpdate() {
+    try {
+      await window.electron?.ipcRenderer.installUpdate();
+    } catch (error) {
+      console.error('Error installing update:', error);
+    }
   }
 
   // Filter only assistant messages
@@ -736,6 +846,58 @@ export default function App() {
               </Tooltip>
 
               <div className="flex flex-row items-center">
+                {/* Update button - only show if there's an update available or downloading */}
+                {(updateStatus === 'available' ||
+                  updateStatus === 'downloading' ||
+                  updateStatus === 'downloaded' ||
+                  updateStatus === 'checking' ||
+                  updateStatus === 'error') && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button
+                        onMouseEnter={onMouseEnter}
+                        onMouseLeave={onMouseLeave}
+                        size="sm"
+                        className={cn(
+                          'bg-transparent shadow-none',
+                          updateStatus === 'downloading' && 'text-yellow-500',
+                          updateStatus === 'error' && 'text-red-500',
+                        )}
+                        disabled={
+                          updateStatus === 'checking' ||
+                          updateStatus === 'downloading' ||
+                          updateStatus === 'error'
+                        }
+                        onClick={
+                          updateStatus === 'downloaded'
+                            ? handleInstallUpdate
+                            : handleCheckForUpdates
+                        }
+                      >
+                        <Download className="w-4 h-4" />
+                        {updateStatus === 'downloading' && downloadProgress && (
+                          <span className="ml-1 text-xs">
+                            {Math.round(downloadProgress.percent)}%
+                          </span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      className="max-w-[350px] text-center"
+                    >
+                      {updateStatus === 'checking' && 'Checking for updates...'}
+                      {updateStatus === 'available' &&
+                        'Update available. Click to update.'}
+                      {updateStatus === 'downloading' &&
+                        `Downloading update... ${downloadProgress ? Math.round(downloadProgress.percent) : 0}%`}
+                      {updateStatus === 'downloaded' &&
+                        'Update downloaded. Click to install.'}
+                      {updateStatus === 'error' && 'Error: ' + updateError}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
                 {/* Window positioning buttons in tooltip */}
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger asChild>

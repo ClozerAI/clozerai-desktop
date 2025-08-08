@@ -25,7 +25,15 @@ export type Channels =
   | 'ipc-toggle-privacy'
   | 'ipc-clear-messages'
   | 'ipc-write-clipboard'
-  | 'ipc-auth-cookie-updated';
+  | 'ipc-auth-cookie-updated'
+  | 'ipc-update-checking'
+  | 'ipc-update-available'
+  | 'ipc-update-not-available'
+  | 'ipc-update-error'
+  | 'ipc-update-download-progress'
+  | 'ipc-update-downloaded'
+  | 'ipc-check-for-updates'
+  | 'ipc-install-update';
 
 const electronHandler = {
   ipcRenderer: {
@@ -68,6 +76,12 @@ const electronHandler = {
     },
     async storeAuthToken(authToken: string): Promise<boolean> {
       return ipcRenderer.invoke('ipc-store-auth-token', authToken);
+    },
+    async checkForUpdates(): Promise<any> {
+      return ipcRenderer.invoke('ipc-check-for-updates');
+    },
+    async installUpdate(): Promise<void> {
+      return ipcRenderer.invoke('ipc-install-update');
     },
   },
   platform: process.platform,
