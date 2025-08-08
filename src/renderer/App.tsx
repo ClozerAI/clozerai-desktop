@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './components/ui/select';
+import { toast } from 'sonner';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -394,7 +395,6 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<
     'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
   >('idle');
-  const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [downloadProgress, setDownloadProgress] = useState<{
     percent: number;
   } | null>(null);
@@ -468,13 +468,12 @@ export default function App() {
     const updateAvailableHandler = (...args: unknown[]) => {
       const updateInfo = args[0];
       setUpdateStatus('available');
-      setUpdateInfo(updateInfo);
+      toast(updateInfo as string);
       setUpdateError(null);
     };
 
     const updateNotAvailableHandler = () => {
       setUpdateStatus('idle');
-      setUpdateInfo(null);
       setUpdateError(null);
     };
 
@@ -482,6 +481,7 @@ export default function App() {
       const error = args[0] as string;
       setUpdateStatus('error');
       setUpdateError(error);
+      toast.error(error);
     };
 
     const updateDownloadProgressHandler = (...args: unknown[]) => {
@@ -494,7 +494,7 @@ export default function App() {
     const updateDownloadedHandler = (...args: unknown[]) => {
       const info = args[0];
       setUpdateStatus('downloaded');
-      setUpdateInfo(info);
+      toast(info as string);
       setDownloadProgress(null);
       setUpdateError(null);
     };
