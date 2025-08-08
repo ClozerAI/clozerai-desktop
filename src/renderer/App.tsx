@@ -615,6 +615,18 @@ export default function App() {
     }
   }
 
+  async function handleUpdateButtonClick() {
+    if (updateStatus === 'error') {
+      // Clear error state and check for updates again
+      setUpdateStatus('idle');
+      setUpdateError(null);
+    } else if (updateStatus === 'downloaded') {
+      handleInstallUpdate();
+    } else {
+      handleCheckForUpdates();
+    }
+  }
+
   async function handleInstallUpdate() {
     try {
       await window.electron?.ipcRenderer.installUpdate();
@@ -865,14 +877,9 @@ export default function App() {
                         )}
                         disabled={
                           updateStatus === 'checking' ||
-                          updateStatus === 'downloading' ||
-                          updateStatus === 'error'
+                          updateStatus === 'downloading'
                         }
-                        onClick={
-                          updateStatus === 'downloaded'
-                            ? handleInstallUpdate
-                            : handleCheckForUpdates
-                        }
+                        onClick={handleUpdateButtonClick}
                       >
                         <Download className="w-4 h-4" />
                         {updateStatus === 'downloading' && downloadProgress && (

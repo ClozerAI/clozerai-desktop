@@ -364,6 +364,9 @@ async function handleProtocolUrl(url: string) {
   // Parse the URL to extract path and query parameters
   const [path, queryString] = urlWithoutPrefix.split('?');
 
+  // Normalize path by removing trailing slashes (Windows may include them)
+  const normalizedPath = path.replace(/\/+$/, '');
+
   // On Windows, command line arguments might have URL encoding issues
   // Decode the query string to ensure proper parsing
   const decodedQueryString = queryString ? decodeURIComponent(queryString) : '';
@@ -371,7 +374,7 @@ async function handleProtocolUrl(url: string) {
 
   const params = new URLSearchParams(decodedQueryString);
 
-  if (path === 'auth') {
+  if (normalizedPath === 'auth') {
     // Handle auth URL: clozerai://auth?payload=...
     const payload = params.get('payload');
     log.info('Extracted payload:', payload);
@@ -417,7 +420,7 @@ async function handleProtocolUrl(url: string) {
     } else {
       log.info('Missing payload in auth URL');
     }
-  } else if (path === 'session') {
+  } else if (normalizedPath === 'session') {
     // Handle session URL: clozerai://session?payload=...
     const payload = params.get('payload');
     log.info('Extracted session payload:', payload);
@@ -470,7 +473,7 @@ async function handleProtocolUrl(url: string) {
       log.info('Missing payload in session URL');
     }
   } else {
-    log.info('Invalid path in protocol URL:', path);
+    log.info('Invalid path in protocol URL:', normalizedPath);
   }
 }
 
