@@ -881,11 +881,12 @@ export default function App() {
                         }
                         onClick={handleUpdateButtonClick}
                       >
-                        <Download className="w-4 h-4" />
-                        {updateStatus === 'downloading' && downloadProgress && (
+                        {updateStatus === 'downloading' && downloadProgress ? (
                           <span className="text-xs">
                             {Math.round(downloadProgress.percent)}%
                           </span>
+                        ) : (
+                          <Download className="w-4 h-4" />
                         )}
                       </Button>
                     </TooltipTrigger>
@@ -897,7 +898,7 @@ export default function App() {
                       {updateStatus === 'available' &&
                         'Update available. Click to download.'}
                       {updateStatus === 'downloading' &&
-                        `Downloading update... ${downloadProgress ? Math.round(downloadProgress.percent) : 0}%`}
+                        'Downloading update...'}
                       {updateStatus === 'downloaded' &&
                         'Update downloaded. Click to install.'}
                       {updateStatus === 'error' && 'Error: ' + updateError}
