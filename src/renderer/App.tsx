@@ -883,7 +883,7 @@ export default function App() {
                       >
                         <Download className="w-4 h-4" />
                         {updateStatus === 'downloading' && downloadProgress && (
-                          <span className="ml-1 text-xs">
+                          <span className="text-xs">
                             {Math.round(downloadProgress.percent)}%
                           </span>
                         )}
@@ -891,11 +891,11 @@ export default function App() {
                     </TooltipTrigger>
                     <TooltipContent
                       side="bottom"
-                      className="max-w-[350px] text-center"
+                      className="max-w-[350px] break-words text-center"
                     >
                       {updateStatus === 'checking' && 'Checking for updates...'}
                       {updateStatus === 'available' &&
-                        'Update available. Click to update.'}
+                        'Update available. Click to download.'}
                       {updateStatus === 'downloading' &&
                         `Downloading update... ${downloadProgress ? Math.round(downloadProgress.percent) : 0}%`}
                       {updateStatus === 'downloaded' &&
