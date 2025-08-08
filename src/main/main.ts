@@ -294,48 +294,72 @@ function handleProtocolUrl(url: string) {
   const params = new URLSearchParams(queryString || '');
 
   if (path === 'auth') {
-    // Handle auth-only URL: clozerai://auth?authToken=...
-    const authToken = params.get('authToken');
-    if (authToken) {
-      console.log('Received auth token from protocol');
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore();
+    // Handle auth URL: clozerai://auth?payload=...
+    const payload = params.get('payload');
+    if (payload) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(payload, 'base64').toString('utf8'),
+        );
+        const authToken: string | undefined = decoded.authToken;
+        if (authToken) {
+          console.log('Received auth token from protocol');
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+              mainWindow.restore();
+            }
+            mainWindow.focus();
+            // Set cookies ...
+            setNextAuthCookie(authToken);
+          } else {
+            // Store the URL to handle it once the main window is ready
+            initialProtocolUrl = url;
+          }
+        } else {
+          console.log('No auth token found in auth payload');
         }
-        mainWindow.focus();
-        // Set cookies ...
-        setNextAuthCookie(authToken);
-      } else {
-        // Store the URL to handle it once the main window is ready
-        initialProtocolUrl = url;
+      } catch (e) {
+        console.error('Invalid payload in auth protocol URL:', e);
       }
     } else {
-      console.log('No auth token found in auth URL');
+      console.log('Missing payload in auth URL');
     }
   } else if (path === 'session') {
-    // Handle session URL: clozerai://session?callSessionId=...&authToken=...
-    const callSessionId = params.get('callSessionId');
-    const authToken = params.get('authToken');
+    // Handle session URL: clozerai://session?payload=...
+    const payload = params.get('payload');
+    if (payload) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(payload, 'base64').toString('utf8'),
+        );
+        const callSessionId: string | undefined = decoded.callSessionId;
+        const authToken: string | undefined = decoded.authToken;
 
-    if (callSessionId && authToken) {
-      console.log(
-        'Received session ID and auth token from protocol:',
-        callSessionId,
-      );
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) {
-          mainWindow.restore();
+        if (callSessionId && authToken) {
+          console.log(
+            'Received session ID and auth token from protocol:',
+            callSessionId,
+          );
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+              mainWindow.restore();
+            }
+            mainWindow.focus();
+            // Set cookies ...
+            setNextAuthCookie(authToken);
+            mainWindow.webContents.send('ipc-load-session', callSessionId);
+          } else {
+            // Store the URL to handle it once the main window is ready
+            initialProtocolUrl = url;
+          }
+        } else {
+          console.log('Missing callSessionId or authToken in session payload');
         }
-        mainWindow.focus();
-        // Set cookies ...
-        setNextAuthCookie(authToken);
-        mainWindow.webContents.send('ipc-load-session', callSessionId);
-      } else {
-        // Store the URL to handle it once the main window is ready
-        initialProtocolUrl = url;
+      } catch (e) {
+        console.error('Invalid payload in session protocol URL:', e);
       }
     } else {
-      console.log('Missing callSessionId or authToken in session URL');
+      console.log('Missing payload in session URL');
     }
   } else {
     console.log('Invalid path in protocol URL:', path);
