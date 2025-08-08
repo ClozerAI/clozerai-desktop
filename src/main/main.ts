@@ -47,9 +47,15 @@ class AppUpdater {
       repo: 'clozerai-desktop-releases',
     });
 
+    autoUpdater.autoInstallOnAppQuit = true;
+
     // Set up event listeners
     this.setupEventListeners();
 
+    // TODO: Remove this once we have a signed build for Windows
+    if (isWindows) {
+      return;
+    }
     // Check for updates automatically
     autoUpdater.checkForUpdatesAndNotify();
   }
@@ -307,6 +313,11 @@ ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
 // Add update handlers
 ipcMain.handle('ipc-check-for-updates', async () => {
   try {
+    // TODO: Remove this once we have a signed build for Windows
+    if (isWindows) {
+      log.info('Auto-updates are disabled on Windows (unsigned builds).');
+      return null;
+    }
     return await autoUpdater.checkForUpdatesAndNotify();
   } catch (error) {
     log.error('Error checking for updates:', error);
@@ -316,6 +327,11 @@ ipcMain.handle('ipc-check-for-updates', async () => {
 
 ipcMain.handle('ipc-install-update', async () => {
   try {
+    // TODO: Remove this once we have a signed build for Windows
+    if (isWindows) {
+      log.info('Auto-updates are disabled on Windows (unsigned builds).');
+      return;
+    }
     autoUpdater.quitAndInstall();
   } catch (error) {
     log.error('Error installing update:', error);
@@ -610,7 +626,12 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  new AppUpdater();
+  // TODO: Remove this once we have a signed build for Windows
+  if (!isWindows) {
+    new AppUpdater();
+  } else {
+    log.info('Auto-updater is disabled on Windows (unsigned builds).');
+  }
 };
 
 app.whenReady().then(async () => {
