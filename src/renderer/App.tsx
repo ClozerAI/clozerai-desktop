@@ -466,9 +466,7 @@ export default function App() {
     };
 
     const updateAvailableHandler = (...args: unknown[]) => {
-      const updateInfo = args[0];
       setUpdateStatus('available');
-      toast(updateInfo as string);
       setUpdateError(null);
     };
 
