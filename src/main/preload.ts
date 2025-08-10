@@ -28,6 +28,7 @@ export type Channels =
   | 'ipc-auth-cookie-updated'
   | 'ipc-update-checking'
   | 'ipc-update-available'
+  | 'ipc-update-available-windows'
   | 'ipc-update-not-available'
   | 'ipc-update-error'
   | 'ipc-update-download-progress'
@@ -77,11 +78,11 @@ const electronHandler = {
     async storeAuthToken(authToken: string): Promise<boolean> {
       return ipcRenderer.invoke('ipc-store-auth-token', authToken);
     },
-    async checkForUpdates(): Promise<any> {
-      return ipcRenderer.invoke('ipc-check-for-updates');
-    },
     async installUpdate(): Promise<void> {
       return ipcRenderer.invoke('ipc-install-update');
+    },
+    async openWindowsDownload(downloadUrl: string): Promise<void> {
+      return ipcRenderer.invoke('ipc-open-windows-download', downloadUrl);
     },
   },
   platform: process.platform,

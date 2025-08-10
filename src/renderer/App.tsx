@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner';
 
 const isMac = window.electron?.platform === 'darwin';
+const isWindows = window.electron?.platform === 'win32';
 
 function ShortcutIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return isMac ? <Command className={className} /> : 'Ctrl';
@@ -64,6 +65,12 @@ export default function App() {
   } = api.user.getUserProfile.useQuery(undefined, {
     retry: false,
   });
+
+  // Fetch latest release data for Windows downloads
+  const { data: releaseData, isLoading: releaseLoading } =
+    api.user.getLatestRelease.useQuery(undefined, {
+      retry: false,
+    });
 
   const loggedIn = user && !userError;
 
@@ -605,14 +612,6 @@ export default function App() {
     );
   }
 
-  async function handleCheckForUpdates() {
-    try {
-      await window.electron?.ipcRenderer.checkForUpdates();
-    } catch (error) {
-      console.error('Error checking for updates:', error);
-    }
-  }
-
   async function handleUpdateButtonClick() {
     if (updateStatus === 'error') {
       // Clear error state and check for updates again
@@ -620,8 +619,20 @@ export default function App() {
       setUpdateError(null);
     } else if (updateStatus === 'downloaded') {
       handleInstallUpdate();
-    } else {
-      handleCheckForUpdates();
+    } else if (updateStatus === 'available') {
+      // If Windows and there's a download URL available, open browser
+      if (isWindows) {
+        if (!releaseData?.downloads?.windows) {
+          toast.error('Loading latest release data...');
+          return;
+        }
+        try {
+          window.open(releaseData.downloads.windows, '_blank');
+        } catch (error) {
+          console.error('Error opening Windows download:', error);
+          toast.error('Failed to open download page');
+        }
+      }
     }
   }
 
@@ -875,7 +886,9 @@ export default function App() {
                         )}
                         disabled={
                           updateStatus === 'checking' ||
-                          updateStatus === 'downloading'
+                          updateStatus === 'downloading' ||
+                          (isWindows && !releaseData?.downloads?.windows) ||
+                          (isMac && updateStatus === 'available')
                         }
                         onClick={handleUpdateButtonClick}
                       >
@@ -894,7 +907,9 @@ export default function App() {
                     >
                       {updateStatus === 'checking' && 'Checking for updates...'}
                       {updateStatus === 'available' &&
-                        'Update available. Click to download.'}
+                        (isMac
+                          ? 'Update available. Waiting for download...'
+                          : 'Update available. Click to download.')}
                       {updateStatus === 'downloading' &&
                         'Downloading update...'}
                       {updateStatus === 'downloaded' &&

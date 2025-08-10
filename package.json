@@ -127,7 +127,8 @@
     "publish": {
       "provider": "github",
       "owner": "JureSotosek",
-      "repo": "clozerai-desktop-releases"
+      "repo": "clozerai-desktop-releases",
+      "releaseType": "release"
     },
     "protocols": [
       {

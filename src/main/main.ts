@@ -51,12 +51,6 @@ class AppUpdater {
 
     // Set up event listeners
     this.setupEventListeners();
-
-    // TODO: Remove this once we have a signed build for Windows
-    if (isWindows) {
-      return;
-    }
-    // Check for updates automatically
     autoUpdater.checkForUpdatesAndNotify();
   }
 
@@ -83,12 +77,23 @@ class AppUpdater {
 
     autoUpdater.on('download-progress', (progressObj) => {
       log.info('Download progress:', progressObj);
-      mainWindow?.webContents.send('ipc-update-download-progress', progressObj);
+      // Only send download progress for macOS
+      // TODO: Remove this once we have a signed build for Windows
+      if (!isWindows) {
+        mainWindow?.webContents.send(
+          'ipc-update-download-progress',
+          progressObj,
+        );
+      }
     });
 
     autoUpdater.on('update-downloaded', (info) => {
       log.info('Update downloaded:', info);
-      mainWindow?.webContents.send('ipc-update-downloaded', info);
+      // Only send download completed for macOS
+      // TODO: Remove this once we have a signed build for Windows
+      if (!isWindows) {
+        mainWindow?.webContents.send('ipc-update-downloaded', info);
+      }
     });
   }
 }
@@ -306,21 +311,6 @@ ipcMain.handle('ipc-store-auth-token', async (_, authToken: string) => {
     return true;
   } catch (error) {
     log.error('Error setting auth token:', error);
-    throw error;
-  }
-});
-
-// Add update handlers
-ipcMain.handle('ipc-check-for-updates', async () => {
-  try {
-    // TODO: Remove this once we have a signed build for Windows
-    if (isWindows) {
-      log.info('Auto-updates are disabled on Windows (unsigned builds).');
-      return null;
-    }
-    return await autoUpdater.checkForUpdatesAndNotify();
-  } catch (error) {
-    log.error('Error checking for updates:', error);
     throw error;
   }
 });
@@ -626,12 +616,10 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  // TODO: Remove this once we have a signed build for Windows
-  if (!isWindows) {
-    new AppUpdater();
-  } else {
-    log.info('Auto-updater is disabled on Windows (unsigned builds).');
-  }
+  // Enable AppUpdater for both Windows and macOS
+  // Windows will check for updates but use browser downloads
+  // macOS will use the full auto-updater functionality
+  new AppUpdater();
 };
 
 app.whenReady().then(async () => {
