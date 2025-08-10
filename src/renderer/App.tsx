@@ -496,10 +496,8 @@ export default function App() {
       setUpdateError(null);
     };
 
-    const updateDownloadedHandler = (...args: unknown[]) => {
-      const info = args[0];
+    const updateDownloadedHandler = () => {
       setUpdateStatus('downloaded');
-      toast(info as string);
       setDownloadProgress(null);
       setUpdateError(null);
     };
