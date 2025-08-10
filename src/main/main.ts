@@ -608,6 +608,22 @@ const createWindow = async () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    // Exit the app when main window is closed
+    app.quit();
+  });
+
+  // Handle renderer process crashes
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    log.error('Renderer process crashed:', details);
+    // Exit the app when renderer crashes
+    app.quit();
+  });
+
+  // Handle unresponsive renderer
+  mainWindow.on('unresponsive', () => {
+    log.warn('Main window became unresponsive');
+    // Exit the app when main window becomes unresponsive
+    app.quit();
   });
 
   // Open urls in the user's browser
