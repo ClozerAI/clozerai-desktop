@@ -727,6 +727,11 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
 
+// Quit when all windows are closed
+app.on('window-all-closed', () => {
+  app.quit();
+});
+
 ipcMain.handle('get-app-version', () => {
   return process.env.NODE_ENV === 'production'
     ? app.getVersion()
