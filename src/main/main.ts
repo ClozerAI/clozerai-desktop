@@ -49,7 +49,7 @@ class AppUpdater {
 
     // Set up event listeners
     this.setupEventListeners();
-    autoUpdater.checkForUpdates();
+    autoUpdater.checkForUpdatesAndNotify();
   }
 
   private setupEventListeners() {
@@ -70,7 +70,11 @@ class AppUpdater {
 
     autoUpdater.on('error', (err) => {
       log.error('Error in auto-updater:', err);
-      mainWindow?.webContents.send('ipc-update-error', err.message);
+      // Only send update error for macOS
+      // TODO: Remove this once we have a signed build for Windows
+      if (!isWindows) {
+        mainWindow?.webContents.send('ipc-update-error', err.message);
+      }
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
