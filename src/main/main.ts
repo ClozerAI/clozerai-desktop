@@ -47,11 +47,9 @@ class AppUpdater {
       repo: 'clozerai-desktop-releases',
     });
 
-    autoUpdater.autoInstallOnAppQuit = true;
-
     // Set up event listeners
     this.setupEventListeners();
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
   }
 
   private setupEventListeners() {
