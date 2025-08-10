@@ -472,7 +472,7 @@ export default function App() {
       setUpdateError(null);
     };
 
-    const updateAvailableHandler = (...args: unknown[]) => {
+    const updateAvailableHandler = () => {
       setUpdateStatus('available');
       setUpdateError(null);
     };
