@@ -43,7 +43,7 @@ class AppUpdater {
     // Configure the update server to point to the release repository
     autoUpdater.setFeedURL({
       provider: 'github',
-      owner: 'JureSotosek',
+      owner: 'clozerai',
       repo: 'clozerai-desktop-releases',
     });
 

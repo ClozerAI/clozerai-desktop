@@ -47,13 +47,13 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
           # Get the latest draft release and publish it
-          RELEASE_ID=$(gh api repos/JureSotosek/clozerai-desktop-releases/releases --jq '.[] | select(.draft == true) | .id' | head -1)
+          RELEASE_ID=$(gh api repos/clozerai/clozerai-desktop-releases/releases --jq '.[] | select(.draft == true) | .id' | head -1)
           if [ -n "$RELEASE_ID" ]; then
             # First, publish the draft (remove draft status)
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              repos/JureSotosek/clozerai-desktop-releases/releases/$RELEASE_ID \
+              repos/clozerai/clozerai-desktop-releases/releases/$RELEASE_ID \
               -f draft=false
             echo "Published release $RELEASE_ID"
             
@@ -61,7 +61,7 @@ jobs:
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
-              repos/JureSotosek/clozerai-desktop-releases/releases/$RELEASE_ID \
+              repos/clozerai/clozerai-desktop-releases/releases/$RELEASE_ID \
               -f make_latest=true
             echo "Set release $RELEASE_ID as latest"
           else
