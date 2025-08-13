@@ -179,7 +179,7 @@ export default function useMicrophoneTranscription(
 
     for (const chunk of chunks) {
       try {
-        realtimeClientRef.current.sendAudio(chunk);
+        realtimeClientRef.current.sendAudio(chunk.buffer);
       } catch (error) {
         console.error('Error sending audio:', error);
         if (error instanceof Error) {
