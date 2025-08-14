@@ -1187,7 +1187,10 @@ export default function App() {
                     {combinedTranscript.length > 0 ? (
                       <div className="flex-1 text-left flex flex-row gap-1 justify-start">
                         {combinedTranscript.map((t) => (
-                          <div className="flex flex-row gap-1 justify-start">
+                          <div
+                            className="flex flex-row gap-1 justify-start"
+                            key={t.createdAt.toISOString()}
+                          >
                             {t.finalTranscript}
                             <span className="opacity-70 w-full text-left">
                               {t.partialTranscript}

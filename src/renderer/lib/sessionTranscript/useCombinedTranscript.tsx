@@ -27,6 +27,8 @@ export default function useCombinedTranscript(
   // Save unsaved transcripts to the database
   const saveUnsavedTranscripts = useCallback(
     async (saveAll: boolean = false) => {
+      if (!callSessionId || !saveTranscript) return;
+
       const unsavedTranscripts = combinedTranscript.filter(
         (entry) =>
           !entry.saved &&
@@ -70,8 +72,6 @@ export default function useCombinedTranscript(
 
   // Set up interval to save unsaved transcripts
   useEffect(() => {
-    if (!saveTranscript) return;
-
     const interval = setInterval(() => {
       saveUnsavedTranscriptsRef.current();
     }, 5000);
