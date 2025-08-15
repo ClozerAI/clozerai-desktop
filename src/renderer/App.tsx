@@ -1016,7 +1016,7 @@ export default function App() {
                           size="sm"
                           onClick={handleZoomOut}
                           className="bg-transparent hover:bg-white/20"
-                          title="Zoom Out"
+                          title={`Zoom Out (${isMac ? '⌘' : 'Ctrl'}+-)`}
                         >
                           <Minus className="w-4 h-4" />
                         </Button>
@@ -1027,7 +1027,7 @@ export default function App() {
                           size="sm"
                           onClick={handleZoomIn}
                           className="bg-transparent hover:bg-white/20"
-                          title="Zoom In"
+                          title={`Zoom In (${isMac ? '⌘' : 'Ctrl'}++)`}
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
