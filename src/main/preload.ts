@@ -33,7 +33,10 @@ export type Channels =
   | 'ipc-update-error'
   | 'ipc-update-download-progress'
   | 'ipc-update-downloaded'
-  | 'ipc-install-update';
+  | 'ipc-install-update'
+  | 'ipc-zoom-in'
+  | 'ipc-zoom-out'
+  | 'ipc-zoom-reset';
 
 const electronHandler = {
   ipcRenderer: {

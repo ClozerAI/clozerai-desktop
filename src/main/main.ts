@@ -35,6 +35,20 @@ log.transports.console.level = 'info';
 // Make WebSocket available globally
 (global as any).WebSocket = WebSocket;
 
+// Store reference for persistent settings
+let store: any = null;
+
+// Initialize electron-store asynchronously
+const initializeStore = async () => {
+  const Store = (await import('electron-store')).default;
+  store = new Store({
+    defaults: {
+      zoomLevel: 0, // Default zoom level
+    },
+  });
+  return store;
+};
+
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -292,6 +306,41 @@ ipcMain.on('ipc-toggle-content-protection', (_, disabled: boolean) => {
 ipcMain.on('ipc-toggle-privacy', (_, isPrivate: boolean) => {
   if (mainWindow) {
     mainWindow.setContentProtection(isPrivate);
+  }
+});
+
+// Add zoom IPC handlers
+ipcMain.on('ipc-zoom-in', () => {
+  if (mainWindow) {
+    const currentZoom = mainWindow.webContents.getZoomLevel();
+    const newZoom = Math.min(currentZoom + 0.5, 3); // Max zoom level of 3
+    mainWindow.webContents.setZoomLevel(newZoom);
+    if (store) {
+      store.set('zoomLevel', newZoom); // Save to persistent store
+    }
+    console.log(`Zoom level set to: ${newZoom}`);
+  }
+});
+
+ipcMain.on('ipc-zoom-out', () => {
+  if (mainWindow) {
+    const currentZoom = mainWindow.webContents.getZoomLevel();
+    const newZoom = Math.max(currentZoom - 0.5, -3); // Min zoom level of -3
+    mainWindow.webContents.setZoomLevel(newZoom);
+    if (store) {
+      store.set('zoomLevel', newZoom); // Save to persistent store
+    }
+    console.log(`Zoom level set to: ${newZoom}`);
+  }
+});
+
+ipcMain.on('ipc-zoom-reset', () => {
+  if (mainWindow) {
+    mainWindow.webContents.setZoomLevel(0); // Reset to normal zoom
+    if (store) {
+      store.set('zoomLevel', 0); // Save to persistent store
+    }
+    console.log('Zoom level reset to: 0');
   }
 });
 
@@ -597,6 +646,18 @@ const createWindow = async () => {
   mainWindow.on('ready-to-show', async () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
+    }
+
+    // Initialize store and restore zoom level
+    try {
+      await initializeStore();
+      if (store) {
+        const savedZoomLevel = store.get('zoomLevel', 0);
+        mainWindow.webContents.setZoomLevel(savedZoomLevel);
+        console.log(`Restored zoom level: ${savedZoomLevel}`);
+      }
+    } catch (error) {
+      console.error('Error initializing store or restoring zoom level:', error);
     }
 
     mainWindow.show();

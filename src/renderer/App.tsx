@@ -16,6 +16,8 @@ import {
   Eye,
   EyeOff,
   Download,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
@@ -599,6 +601,19 @@ export default function App() {
   function handleResetWindow() {
     setWindowWidth(700);
     setWindowPosition(0);
+    window.electron?.ipcRenderer.sendMessage('ipc-zoom-reset');
+  }
+
+  function handleZoomIn() {
+    window.electron?.ipcRenderer.sendMessage('ipc-zoom-in');
+  }
+
+  function handleZoomOut() {
+    window.electron?.ipcRenderer.sendMessage('ipc-zoom-out');
+  }
+
+  function handleZoomReset() {
+    window.electron?.ipcRenderer.sendMessage('ipc-zoom-reset');
   }
 
   function handleTogglePrivacy() {
@@ -993,6 +1008,28 @@ export default function App() {
                           title="Reset Position & Size"
                         >
                           <RotateCcw className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          size="sm"
+                          onClick={handleZoomOut}
+                          className="bg-transparent hover:bg-white/20"
+                          title="Zoom Out"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+
+                        <Button
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}
+                          size="sm"
+                          onClick={handleZoomIn}
+                          className="bg-transparent hover:bg-white/20"
+                          title="Zoom In"
+                        >
+                          <Plus className="w-4 h-4" />
                         </Button>
 
                         <Button
