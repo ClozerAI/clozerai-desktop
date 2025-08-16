@@ -148,6 +148,7 @@ export default function useSessionTranscription({
         });
       }
     },
+    experimental_throttle: 50,
   });
 
   function appendAndSave(message: Message | CreateMessage) {
