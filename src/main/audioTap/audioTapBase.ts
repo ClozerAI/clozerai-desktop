@@ -4,6 +4,7 @@ import {
   RealtimeClient,
   ReceiveMessageEvent,
 } from '@speechmatics/real-time-client';
+import log from 'electron-log';
 
 interface AudioTapConfig {
   speechmaticsApiKey: string;
@@ -30,7 +31,7 @@ interface AudioTapBaseOptions {
 export const startAudioTapBase =
   (options: AudioTapBaseOptions): StartAudioTap =>
   async ({ speechmaticsApiKey, language, onPartial, onFinal, onError }) => {
-    console.log('Starting audio tap with options:', options);
+    log.info('Starting audio tap with options:', options);
 
     options.checkPlatformVersion();
 
@@ -44,8 +45,98 @@ export const startAudioTapBase =
       null;
     let socketStateChangeHandler: ((event: any) => void) | null = null;
 
+    // Retry logic state
+    let retryCount = 0;
+    const maxRetries = 2;
+    let isRetrying = false;
+
+    const startAudioProcess = () => {
+      const exePath = options.getExecutablePath();
+      audioProcess = spawn(exePath, [], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      audioProcess.on('error', (error) => {
+        handleError(new Error(`Audio capture process error: ${error.message}`));
+      });
+
+      audioProcess.on('exit', (code, signal) => {
+        if (!cleanupCalled) {
+          const errorMessage = `Audio capture process exited with code ${code}, signal ${signal}`;
+          log.info(errorMessage);
+
+          // Only retry for process exit codes if we haven't exceeded max retries
+          if (retryCount < maxRetries && !isRetrying) {
+            retryCount++;
+            isRetrying = true;
+            log.info(
+              `Attempting restart ${retryCount}/${maxRetries} for audio process...`,
+            );
+            try {
+              startAudioProcess();
+              isRetrying = false;
+              log.info(`Audio process restart attempt ${retryCount} completed`);
+            } catch (error) {
+              isRetrying = false;
+              handleError(
+                new Error(
+                  `Failed to restart audio process: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                ),
+              );
+            }
+          } else {
+            handleError(new Error(errorMessage));
+          }
+        }
+      });
+
+      // Handle stderr for debugging
+      if (audioProcess.stderr) {
+        audioProcess.stderr.on('data', (data) => {
+          const lines = data.toString().trim().split('\n');
+          for (const line of lines) {
+            if (line.startsWith('INFO:')) {
+              log.info('Audio capture info:', line);
+            } else {
+              handleError(new Error(line.substring('ERROR:'.length).trim()));
+            }
+          }
+        });
+      }
+
+      // Pipe audio data to Speechmatics
+      if (audioProcess.stdout) {
+        audioProcess.stdout.on('data', (audioData: Buffer) => {
+          // Reset retry counter when we receive valid audio data
+          if (retryCount > 0) {
+            log.info('Received valid audio data, resetting retry counter');
+            retryCount = 0;
+          }
+
+          if (client && clientReady && !cleanupCalled) {
+            try {
+              if (client.socketState !== 'open') {
+                handleError(
+                  new Error('Speechmatics socket closed during audio capture'),
+                );
+              }
+              client.sendAudio(audioData);
+            } catch (error) {
+              log.error('Error sending audio to Speechmatics:', error);
+              // Propagate the error instead of just logging it
+              handleError(
+                new Error(
+                  `Failed to send audio to Speechmatics: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                ),
+              );
+            }
+          }
+        });
+      }
+    };
+
     const handleError = (error: unknown) => {
-      console.error('Audio capture error:', error);
+      log.error('Audio capture error:', error);
       onError?.(error as Error);
       cleanup();
     };
@@ -66,7 +157,7 @@ export const startAudioTapBase =
       }
 
       cleanupCalled = true;
-      console.log('Starting audio tap cleanup...');
+      log.info('Starting audio tap cleanup...');
 
       return new Promise<void>((resolve) => {
         let audioProcessClosed = false;
@@ -77,14 +168,14 @@ export const startAudioTapBase =
           if (audioProcessClosed && speechmaticsClientClosed) {
             cleanupComplete = true;
             clearTimeout(cleanupTimer);
-            console.log('Audio tap cleanup complete');
+            log.info('Audio tap cleanup complete');
             resolve();
           }
         };
 
         // Set a maximum cleanup time of 5 seconds
         cleanupTimer = setTimeout(() => {
-          console.warn('Audio tap cleanup timed out, forcing completion');
+          log.warn('Audio tap cleanup timed out, forcing completion');
           audioProcessClosed = true;
           speechmaticsClientClosed = true;
           cleanupComplete = true;
@@ -94,7 +185,7 @@ export const startAudioTapBase =
         // Clean up audio process
         if (audioProcess && !audioProcess.killed) {
           audioProcess.once('exit', () => {
-            console.log('Audio process exited during cleanup');
+            log.info('Audio process exited during cleanup');
             audioProcessClosed = true;
             checkCleanupComplete();
           });
@@ -104,7 +195,7 @@ export const startAudioTapBase =
           // Force kill after 2 seconds if it doesn't exit gracefully
           setTimeout(() => {
             if (audioProcess && !audioProcess.killed) {
-              console.warn('Force killing audio process');
+              log.warn('Force killing audio process');
               audioProcess.kill('SIGKILL');
             }
           }, 2000);
@@ -131,9 +222,9 @@ export const startAudioTapBase =
           const stopRecognition = async () => {
             try {
               await client!.stopRecognition({ noTimeout: true });
-              console.log('Speechmatics client stopped gracefully');
+              log.info('Speechmatics client stopped gracefully');
             } catch (error) {
-              console.error('Error stopping recognition:', error);
+              log.error('Error stopping recognition:', error);
             } finally {
               speechmaticsClientClosed = true;
               checkCleanupComplete();
@@ -143,9 +234,7 @@ export const startAudioTapBase =
           // Add a fallback timeout for stopRecognition
           setTimeout(() => {
             if (!speechmaticsClientClosed) {
-              console.warn(
-                'Speechmatics client stop timed out, forcing closure',
-              );
+              log.warn('Speechmatics client stop timed out, forcing closure');
               speechmaticsClientClosed = true;
               checkCleanupComplete();
             }
@@ -175,72 +264,7 @@ export const startAudioTapBase =
             const data = evt.data;
             if (data.message === 'RecognitionStarted') {
               clientReady = true;
-
-              const exePath = options.getExecutablePath();
-              audioProcess = spawn(exePath, [], {
-                stdio: ['ignore', 'pipe', 'pipe'],
-              });
-
-              audioProcess.on('error', (error) => {
-                handleError(
-                  new Error(`Audio capture process error: ${error.message}`),
-                );
-              });
-
-              audioProcess.on('exit', (code, signal) => {
-                if (!cleanupCalled) {
-                  handleError(
-                    new Error(
-                      `Audio capture process exited with code ${code}, signal ${signal}`,
-                    ),
-                  );
-                }
-              });
-
-              // Handle stderr for debugging
-              if (audioProcess.stderr) {
-                audioProcess.stderr.on('data', (data) => {
-                  const lines = data.toString().trim().split('\n');
-                  for (const line of lines) {
-                    if (line.startsWith('INFO:')) {
-                      console.log('Audio capture info:', line);
-                    } else {
-                      handleError(
-                        new Error(line.substring('ERROR:'.length).trim()),
-                      );
-                    }
-                  }
-                });
-              }
-
-              // Pipe audio data to Speechmatics
-              if (audioProcess.stdout) {
-                audioProcess.stdout.on('data', (audioData: Buffer) => {
-                  if (client && clientReady && !cleanupCalled) {
-                    try {
-                      if (client.socketState !== 'open') {
-                        handleError(
-                          new Error(
-                            'Speechmatics socket closed during audio capture',
-                          ),
-                        );
-                      }
-                      client.sendAudio(audioData);
-                    } catch (error) {
-                      console.error(
-                        'Error sending audio to Speechmatics:',
-                        error,
-                      );
-                      // Propagate the error instead of just logging it
-                      handleError(
-                        new Error(
-                          `Failed to send audio to Speechmatics: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                        ),
-                      );
-                    }
-                  }
-                });
-              }
+              startAudioProcess();
 
               resolve({
                 cleanup,
@@ -264,25 +288,22 @@ export const startAudioTapBase =
               }
             } else if (data.message === 'Error') {
               const errorDetails = `${data.type || 'Unknown'} - ${data.reason || 'No reason provided'}`;
-              console.error('Speechmatics error details:', data);
+              log.error('Speechmatics error details:', data);
               handleError(new Error(`Speechmatics error: ${errorDetails}`));
             } else if (data.message === 'Info') {
-              console.log('Received info:', data);
+              log.info('Received info:', data);
             } else if (data.message === 'Warning') {
-              console.warn('Speechmatics warning:', data);
+              log.warn('Speechmatics warning:', data);
             } else if (data.message === 'AudioAdded') {
               // Do nothing
             } else {
               // Log unknown message types to help debug potential silent failures
-              console.log('Unknown Speechmatics message:', data);
+              log.info('Unknown Speechmatics message:', data);
             }
           };
 
           socketStateChangeHandler = (event) => {
-            console.log(
-              'Speechmatics socket state changed:',
-              event.socketState,
-            );
+            log.info('Speechmatics socket state changed:', event.socketState);
             if (event.socketState === 'closed' && !cleanupCalled) {
               handleError(new Error('Speechmatics socket closed'));
             } else if (event.socketState === 'error' && !cleanupCalled) {
