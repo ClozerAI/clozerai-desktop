@@ -1378,6 +1378,7 @@ export default function App() {
                         trial: !hasActiveSubscription,
                         clientName: clientName.trim() || undefined,
                         language: selectedLanguage,
+                        callScriptId: null,
                       });
                     }
                   }
@@ -1417,6 +1418,7 @@ export default function App() {
                       trial: !hasActiveSubscription,
                       clientName: clientName.trim() || undefined,
                       language: selectedLanguage,
+                      callScriptId: null,
                     });
                   }
                 }}
@@ -1497,59 +1499,64 @@ export default function App() {
                 <span>Loading prompts...</span>
               ) : allPrompts && allPrompts.length > 0 ? (
                 <div className="flex flex-row items-center gap-2">
-                  {allPrompts.map((p, index) => {
-                    // Add tooltips for first and second prompts
-                    if (index === 0) {
-                      return (
-                        <Tooltip key={p.id}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              onClick={() => handleGenerateResponse(p.id)}
-                              onMouseEnter={onMouseEnter}
-                              onMouseLeave={onMouseLeave}
-                            >
-                              {p.title}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="flex flex-row items-center gap-1">
-                            <ShortcutIcon /> + H
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    } else if (index === 1) {
-                      return (
-                        <Tooltip key={p.id}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              onClick={() => handleGenerateResponse(p.id)}
-                              onMouseEnter={onMouseEnter}
-                              onMouseLeave={onMouseLeave}
-                            >
-                              {p.title}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent className="flex flex-row items-center gap-1">
-                            <ShortcutIcon /> + G
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    } else {
-                      // Regular button for other prompts
-                      return (
-                        <Button
-                          key={p.id}
-                          size="sm"
-                          onClick={() => handleGenerateResponse(p.id)}
-                          onMouseEnter={onMouseEnter}
-                          onMouseLeave={onMouseLeave}
-                        >
-                          {p.title}
-                        </Button>
-                      );
-                    }
-                  })}
+                  {allPrompts
+                    .filter(
+                      (prompt) =>
+                        callSession.callScriptId || prompt.id !== 'script',
+                    )
+                    .map((p, index) => {
+                      // Add tooltips for first and second prompts
+                      if (index === 0) {
+                        return (
+                          <Tooltip key={p.id}>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateResponse(p.id)}
+                                onMouseEnter={onMouseEnter}
+                                onMouseLeave={onMouseLeave}
+                              >
+                                {p.title}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="flex flex-row items-center gap-1">
+                              <ShortcutIcon /> + H
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      } else if (index === 1) {
+                        return (
+                          <Tooltip key={p.id}>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateResponse(p.id)}
+                                onMouseEnter={onMouseEnter}
+                                onMouseLeave={onMouseLeave}
+                              >
+                                {p.title}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="flex flex-row items-center gap-1">
+                              <ShortcutIcon /> + G
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      } else {
+                        // Regular button for other prompts
+                        return (
+                          <Button
+                            key={p.id}
+                            size="sm"
+                            onClick={() => handleGenerateResponse(p.id)}
+                            onMouseEnter={onMouseEnter}
+                            onMouseLeave={onMouseLeave}
+                          >
+                            {p.title}
+                          </Button>
+                        );
+                      }
+                    })}
                   {builtInPrompts?.isAnalyzeScreenPromptActive && (
                     <Button
                       onMouseEnter={onMouseEnter}
