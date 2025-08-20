@@ -1378,7 +1378,6 @@ export default function App() {
                         trial: !hasActiveSubscription,
                         clientName: clientName.trim() || undefined,
                         language: selectedLanguage,
-                        callScriptId: null,
                       });
                     }
                   }
@@ -1418,7 +1417,6 @@ export default function App() {
                       trial: !hasActiveSubscription,
                       clientName: clientName.trim() || undefined,
                       language: selectedLanguage,
-                      callScriptId: null,
                     });
                   }
                 }}
