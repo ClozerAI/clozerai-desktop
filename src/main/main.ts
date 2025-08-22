@@ -15,9 +15,13 @@ import {
   screen,
   globalShortcut,
   clipboard,
+  Tray,
+  Menu,
+  nativeImage,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import AutoLaunch from 'auto-launch';
 import { resolveHtmlPath } from './util';
 import getAssetPath from './getAssetPath';
 import { startAudioTapMac } from './audioTap/audioTapMac';
@@ -123,6 +127,13 @@ if (isWindows) {
 
 let mainWindow: BrowserWindow | null = null;
 let audioTapInstance: AudioTapResult | null = null;
+let tray: Tray | null = null;
+
+// Configure auto-launch
+const autoLauncher = new AutoLaunch({
+  name: 'ClozerAI',
+  path: process.execPath,
+});
 
 // Store the initial protocol URL if the app was launched with one
 let initialProtocolUrl: string | null = null;
@@ -196,7 +207,7 @@ ipcMain.on('ipc-toggle-ignore-mouse-events', async (_, arg) => {
 });
 
 ipcMain.on('ipc-quit-app', () => {
-  app.quit();
+  mainWindow?.close();
 });
 
 // Request-response handlers (convert to .handle)
@@ -612,7 +623,7 @@ const createWindow = async () => {
   });
 
   // Hardening
-  mainWindow.setContentProtection(true);
+  mainWindow.setContentProtection(false);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setResizable(false);
 
@@ -669,24 +680,33 @@ const createWindow = async () => {
     }
   });
 
+  mainWindow.on('close', async (event) => {
+    // If app is quitting, clean up audioTap and allow the window to close normally
+    if (audioTapInstance) {
+      try {
+        log.info('Cleaning up audio tap on app quit...');
+        await audioTapInstance.cleanup();
+        log.info('Audio tap cleanup completed on app quit');
+      } catch (error) {
+        log.error('Error during audio tap cleanup on app quit:', error);
+      }
+      audioTapInstance = null;
+    }
+  });
+
   mainWindow.on('closed', () => {
+    // Set mainWindow to null when the window is destroyed
     mainWindow = null;
-    // Exit the app when main window is closed
-    app.quit();
   });
 
   // Handle renderer process crashes
   mainWindow.webContents.on('render-process-gone', (event, details) => {
     log.error('Renderer process crashed:', details);
-    // Exit the app when renderer crashes
-    app.quit();
   });
 
   // Handle unresponsive renderer
   mainWindow.on('unresponsive', () => {
     log.warn('Main window became unresponsive');
-    // Exit the app when main window becomes unresponsive
-    app.quit();
   });
 
   // Open urls in the user's browser
@@ -701,11 +721,87 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
+const createTray = () => {
+  // Get the app version (same logic as IPC handler)
+  const version =
+    process.env.NODE_ENV === 'production' ? app.getVersion() : 'development';
+
+  // Create tray icon with platform-specific handling
+  let trayIcon: Electron.NativeImage;
+  if (isWindows) {
+    // Windows: Use .ico for best quality
+    const iconPath = getAssetPath('icon.ico');
+    trayIcon = nativeImage.createFromPath(iconPath);
+  } else if (process.platform === 'darwin') {
+    // macOS: Use properly sized icons for the menu bar
+    const iconPath = getAssetPath('trayIcon22.png');
+    trayIcon = nativeImage.createFromPath(iconPath);
+    // macOS automatically handles @2x versions if they exist in the same directory
+    // and the file naming follows the convention (trayIcon16.png and trayIcon16@2x.png)
+    trayIcon.setTemplateImage(true); // This makes the icon follow system appearance (dark/light mode)
+  } else {
+    // Linux/other: Use PNG
+    const iconPath = getAssetPath('trayIcon.png');
+    trayIcon = nativeImage.createFromPath(iconPath);
+  }
+
+  tray = new Tray(trayIcon);
+
+  // Create context menu with version item
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show ClozerAI',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) {
+            mainWindow.restore();
+          }
+          if (!mainWindow.isVisible()) {
+            mainWindow.show();
+          }
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+      },
+    },
+    {
+      type: 'separator',
+    },
+    {
+      label: `Version: ${version}`,
+      enabled: false, // Make it non-clickable, just informational
+    },
+    {
+      type: 'separator',
+    },
+    {
+      label: 'Quit',
+      click: () => {
+        app.quit();
+      },
+    },
+  ]);
+
+  // Set tooltip and context menu
+  tray.setToolTip('ClozerAI Desktop');
+  tray.setContextMenu(contextMenu);
+};
+
 app.whenReady().then(async () => {
   // Register the custom protocol
   app.setAsDefaultProtocolClient('clozerai');
 
-  createWindow();
+  // Enable auto-launch
+  try {
+    await autoLauncher.enable();
+    log.info('Auto-launch enabled successfully');
+  } catch (error) {
+    log.error('Failed to enable auto-launch:', error);
+  }
+
+  // Only create tray on startup, window will be created on demand
+  createTray();
 
   // Register global shortcuts for both macOS and Windows
   if (process.platform === 'darwin') {
@@ -785,14 +881,34 @@ app.whenReady().then(async () => {
   }
 });
 
-// Unregister all shortcuts when the app quits
+// Set quitting flag and cleanup when the app quits
+app.on('before-quit', async () => {
+  // Clean up audioTap if it's still running
+  if (audioTapInstance) {
+    try {
+      log.info('Cleaning up audio tap on before-quit...');
+      await audioTapInstance.cleanup();
+      log.info('Audio tap cleanup completed on before-quit');
+    } catch (error) {
+      log.error('Error during audio tap cleanup on before-quit:', error);
+    }
+    audioTapInstance = null;
+  }
+});
+
+// Unregister all shortcuts and cleanup tray when the app quits
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
 });
 
 // Quit when all windows are closed
 app.on('window-all-closed', () => {
-  app.quit();
+  // On macOS it's common for applications to stay active in tray even when all windows are closed
+  // On Windows, typically quit the app, but since we want tray functionality, keep it running
 });
 
 ipcMain.handle('get-app-version', () => {

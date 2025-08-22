@@ -394,7 +394,7 @@ export default function App() {
   // Add state for tracking logo clicks and content protection
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [contentProtectionDisabled, setContentProtectionDisabled] =
-    useState(false);
+    useState(true);
   const logoClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Add state for privacy mode (default to private)
