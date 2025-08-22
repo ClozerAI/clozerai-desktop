@@ -357,7 +357,7 @@ export default function useSessionTranscription({
       appendAndSave({
         role: 'user',
         content: 'Analyze the screen and provide a useful response.',
-        data: { imageUrl: resizedDataUrl },
+        data: { imageUrl: resizedDataUrl, promptId: 'analyze-screen' },
       });
     } catch (err) {
       console.error('Listen error:', err);
