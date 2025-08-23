@@ -582,11 +582,6 @@ const createWindow = async () => {
     await installExtensions();
   }
 
-  // Hide the dock icon on macOS
-  if (process.platform === 'darwin') {
-    app.dock?.hide();
-  }
-
   mainWindow = new BrowserWindow({
     show: isWindows,
     icon: getAssetPath('icons/512x512.png'),
@@ -607,8 +602,6 @@ const createWindow = async () => {
     hasShadow: false,
     fullscreenable: false,
     minimizable: false,
-    hiddenInMissionControl: true,
-    skipTaskbar: true,
   });
 
   // Hardening
