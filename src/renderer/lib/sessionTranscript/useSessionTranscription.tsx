@@ -214,10 +214,18 @@ export default function useSessionTranscription({
     let speechmaticsApiKey = newCallSession?.speechmaticsApiKey!;
 
     if (audioTapStatus === Status.RECORDING) {
-      switchAudioTapApiKey(speechmaticsApiKey!, newCallSession.language);
+      switchAudioTapApiKey(
+        speechmaticsApiKey!,
+        newCallSession.language,
+        newCallSession.dictionaryEntries,
+      );
     }
     if (isRecordingMicrophone) {
-      switchMicrophoneApiKey(speechmaticsApiKey!, newCallSession.language);
+      switchMicrophoneApiKey(
+        speechmaticsApiKey!,
+        newCallSession.language,
+        newCallSession.dictionaryEntries,
+      );
     }
 
     setHasChatActivitySinceLastExtension(false);
@@ -239,6 +247,7 @@ export default function useSessionTranscription({
       await startAudioTapTranscription(
         speechmaticsApiKey!,
         callSession.language,
+        callSession.dictionaryEntries || [],
       );
     } catch (error) {
       console.error('Audio tap transcription error:', error);
@@ -263,6 +272,7 @@ export default function useSessionTranscription({
       await startMicrophoneTranscription(
         speechmaticsApiKey!,
         callSession.language,
+        callSession.dictionaryEntries || [],
       );
     } finally {
       setStartingMicrophoneTranscription(false);

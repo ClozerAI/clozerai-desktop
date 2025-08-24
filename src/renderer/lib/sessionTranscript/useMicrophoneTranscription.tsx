@@ -7,6 +7,7 @@ import {
   RealtimeTranscriptionConfig,
 } from '@speechmatics/real-time-client';
 import { toast } from 'sonner';
+import { DictionaryEntry } from './transcriptTypes';
 
 export const audioWorkletCode = `
 class AudioProcessor extends AudioWorkletProcessor {
@@ -43,6 +44,7 @@ export const initializeSpeechmaticsSession = async (
   onData: (transcript: string) => void,
   onPartialData: (partialTranscript: string) => void,
   onError: (error: any) => void,
+  dictionaryEntries: DictionaryEntry[],
 ): Promise<RealtimeClient> => {
   const realtimeClient = new RealtimeClient();
 
@@ -71,6 +73,10 @@ export const initializeSpeechmaticsSession = async (
       enable_partials: true,
       max_delay: 1,
       domain,
+      additional_vocab: dictionaryEntries.map((entry) => ({
+        content: entry.word,
+        sounds_like: [entry.pronunciation],
+      })),
     },
     audio_format: {
       type: 'raw',
@@ -91,6 +97,7 @@ export default function useMicrophoneTranscription(
   const [bufferHealth, setBufferHealth] = useState<number>(0);
   const currentApiKeyRef = useRef<string | null>(null);
   const currentLanguageRef = useRef<string | null>(null);
+  const currentDictionaryEntriesRef = useRef<DictionaryEntry[] | null>(null);
 
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -123,6 +130,7 @@ export default function useMicrophoneTranscription(
     setBufferHealth(0);
     currentApiKeyRef.current = null;
     currentLanguageRef.current = null;
+    currentDictionaryEntriesRef.current = null;
   }, []);
 
   const stopRecording = useCallback(() => {
@@ -148,7 +156,11 @@ export default function useMicrophoneTranscription(
       toast.error('Session closed or disconnected during audio processing');
 
       // Try to reinitialize the session if we have the credentials
-      if (currentApiKeyRef.current && currentLanguageRef.current !== null) {
+      if (
+        currentApiKeyRef.current &&
+        currentLanguageRef.current !== null &&
+        currentDictionaryEntriesRef.current !== null
+      ) {
         try {
           const client = await initializeSpeechmaticsSession(
             currentApiKeyRef.current,
@@ -159,6 +171,7 @@ export default function useMicrophoneTranscription(
             (error) => {
               toast.error('Speechmatics session error:', error);
             },
+            currentDictionaryEntriesRef.current,
           );
           realtimeClientRef.current = client;
         } catch (error) {
@@ -217,11 +230,13 @@ export default function useMicrophoneTranscription(
   const startTranscription = async (
     apiKey: string,
     language: string,
+    dictionaryEntries: DictionaryEntry[],
   ): Promise<void> => {
     try {
       // Store the credentials for potential reconnection
       currentApiKeyRef.current = apiKey;
       currentLanguageRef.current = language;
+      currentDictionaryEntriesRef.current = dictionaryEntries;
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -257,6 +272,7 @@ export default function useMicrophoneTranscription(
         (error) => {
           toast.error('Speechmatics session error:', error);
         },
+        dictionaryEntries,
       );
       realtimeClientRef.current = client;
 
@@ -280,6 +296,7 @@ export default function useMicrophoneTranscription(
   const switchApiKey = async (
     newApiKey: string,
     language: string,
+    dictionaryEntries: DictionaryEntry[] = [],
   ): Promise<void> => {
     try {
       if (!realtimeClientRef.current || !isRecording) {
@@ -304,6 +321,7 @@ export default function useMicrophoneTranscription(
         (error) => {
           toast.error('Speechmatics session error:', error);
         },
+        dictionaryEntries,
       );
       realtimeClientRef.current = client;
     } catch (error) {

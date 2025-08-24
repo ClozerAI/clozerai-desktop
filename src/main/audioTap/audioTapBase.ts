@@ -5,10 +5,12 @@ import {
   ReceiveMessageEvent,
 } from '@speechmatics/real-time-client';
 import log from 'electron-log';
+import { DictionaryEntry } from '@/renderer/lib/sessionTranscript/transcriptTypes';
 
 interface AudioTapConfig {
   speechmaticsApiKey: string;
   language: string;
+  dictionaryEntries?: DictionaryEntry[];
   onPartial?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: Error) => void;
@@ -30,7 +32,14 @@ interface AudioTapBaseOptions {
 
 export const startAudioTapBase =
   (options: AudioTapBaseOptions): StartAudioTap =>
-  async ({ speechmaticsApiKey, language, onPartial, onFinal, onError }) => {
+  async ({
+    speechmaticsApiKey,
+    language,
+    dictionaryEntries,
+    onPartial,
+    onFinal,
+    onError,
+  }) => {
     log.info('Starting audio tap with options:', options);
 
     options.checkPlatformVersion();
@@ -327,6 +336,10 @@ export const startAudioTapBase =
                   operating_point: 'enhanced',
                   enable_partials: true,
                   max_delay: 1,
+                  additional_vocab: (dictionaryEntries || []).map((entry) => ({
+                    content: entry.word,
+                    sounds_like: [entry.pronunciation],
+                  })),
                 },
                 audio_format: {
                   type: 'raw',

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { DictionaryEntry } from './transcriptTypes';
 
 export enum Status {
   IDLE = 'idle',
@@ -74,7 +75,11 @@ export default function useAudioTap(
     };
   }, [status, isCleaningUp]);
 
-  const startTranscription = async (apiKey: string, language: string) => {
+  const startTranscription = async (
+    apiKey: string,
+    language: string,
+    dictionaryEntries: DictionaryEntry[],
+  ) => {
     await ensureCleanup();
 
     setStatus(Status.STARTING);
@@ -83,6 +88,7 @@ export default function useAudioTap(
       const response = await window.electron?.ipcRenderer.startAudioTap(
         apiKey,
         language,
+        dictionaryEntries,
       );
 
       setStatus(response);
@@ -133,12 +139,16 @@ export default function useAudioTap(
   };
 
   // Switch Speechmatics API Key
-  const switchApiKey = async (newApiKey: string, language: string) => {
+  const switchApiKey = async (
+    newApiKey: string,
+    language: string,
+    dictionaryEntries: DictionaryEntry[],
+  ) => {
     try {
       console.log('Switching Speechmatics API key...');
       await stopRecording();
       console.log('Previous audio tap stopped, starting with new API key...');
-      await startTranscription(newApiKey, language);
+      await startTranscription(newApiKey, language, dictionaryEntries);
       console.log('Audio tap started with new API key');
     } catch (error) {
       setStatus(Status.IDLE);

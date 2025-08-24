@@ -1,4 +1,5 @@
 import { Status } from '@/renderer/lib/sessionTranscript/useAudioTap';
+import { DictionaryEntry } from '@/renderer/lib/sessionTranscript/transcriptTypes';
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels =
@@ -64,11 +65,13 @@ const electronHandler = {
     async startAudioTap(
       speechmaticsApiKey: string,
       language: string,
+      dictionaryEntries: DictionaryEntry[],
     ): Promise<Status> {
       return ipcRenderer.invoke(
         'ipc-start-audio-tap',
         speechmaticsApiKey,
         language,
+        dictionaryEntries,
       );
     },
     async stopAudioTap(): Promise<Status> {

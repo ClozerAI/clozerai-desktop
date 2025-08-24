@@ -202,7 +202,7 @@ ipcMain.on('ipc-quit-app', () => {
 // Request-response handlers (convert to .handle)
 ipcMain.handle(
   'ipc-start-audio-tap',
-  async (_, speechmaticsApiKey, language) => {
+  async (_, speechmaticsApiKey, language, dictionaryEntries) => {
     // Always cleanup any existing instance first to prevent conflicts
     if (audioTapInstance) {
       log.info(
@@ -222,6 +222,7 @@ ipcMain.handle(
       const audioTapConfig = {
         speechmaticsApiKey,
         language,
+        dictionaryEntries,
         onPartial: (partial: string) => {
           mainWindow?.webContents.send(
             'ipc-audio-tap-partial-transcript',
