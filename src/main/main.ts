@@ -602,6 +602,7 @@ const createWindow = async () => {
     hasShadow: false,
     fullscreenable: false,
     minimizable: false,
+    hiddenInMissionControl: true,
   });
 
   // Hardening
