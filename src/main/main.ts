@@ -584,7 +584,6 @@ const createWindow = async () => {
   }
 
   mainWindow = new BrowserWindow({
-    show: isWindows,
     icon: getAssetPath('icons/512x512.png'),
     webPreferences: {
       preload: app.isPackaged
