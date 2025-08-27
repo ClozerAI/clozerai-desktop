@@ -338,7 +338,10 @@ export const startAudioTapBase =
                   max_delay: 1,
                   additional_vocab: (dictionaryEntries || []).map((entry) => ({
                     content: entry.word,
-                    sounds_like: [entry.pronunciation],
+                    sounds_like: entry.pronunciation
+                      .split(',')
+                      .map((pronunciation) => pronunciation.trim())
+                      .filter((pronunciation) => pronunciation.length > 0),
                   })),
                 },
                 audio_format: {
