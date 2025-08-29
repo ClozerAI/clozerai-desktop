@@ -1,5 +1,22 @@
 name: Publish
 
+# Required GitHub Secrets:
+# For macOS signing and notarization:
+#   - APPLE_APP_SPECIFIC_PASSWORD: Apple-specific password for notarization
+#   - APPLE_ID: Apple ID for notarization
+#   - APPLE_TEAM_ID: Apple Developer Team ID
+#   - CSC_LINK: Base64-encoded macOS signing certificate (.p12)
+#   - CSC_KEY_PASSWORD: Password for the macOS signing certificate
+#
+# For Windows signing with SSL.com eSigner:
+#   - ES_USERNAME: SSL.com account username
+#   - ES_PASSWORD: SSL.com account password
+#   - CREDENTIAL_ID: SSL.com code signing certificate credential ID
+#   - ES_TOTP_SECRET: SSL.com TOTP secret for 2FA
+#
+# For publishing releases:
+#   - RELEASE_REPO_TOKEN: GitHub token with access to the releases repository
+
 on:
   push:
     branches:
@@ -11,7 +28,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [macos-latest, windows-latest]
 
     steps:
       - name: Checkout git repo
@@ -29,7 +46,49 @@ jobs:
           npm run postinstall
           npm run build
 
-      - name: Publish releases
+      - name: Build Windows executables (without signing)
+        if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        run: |
+          npm exec electron-builder -- --publish never --win
+
+      - name: Sign Windows executables with eSigner
+        if: matrix.os == 'windows-latest'
+        uses: sslcom/actions-codesigner@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe
+          output_path: ${{ github.workspace }}/release/build/win-unpacked
+          override: true
+
+      - name: Sign Windows installer with eSigner
+        if: matrix.os == 'windows-latest'
+        uses: sslcom/actions-codesigner@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/release/build/ClozerAI Setup *.exe
+          output_path: ${{ github.workspace }}/release/build
+          override: true
+
+      - name: Rebuild Windows packages with signed executables
+        if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        run: |
+          # Rebuild the packages with the signed executables to ensure blockmap matches
+          npm exec electron-builder -- --publish always --win --prepackaged ${{ github.workspace }}/release/build/win-unpacked
+
+      - name: Publish macOS releases
+        if: matrix.os == 'macos-latest'
         env:
           # The APPLE_* values are used for auto updates signing
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -37,10 +96,9 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          # This token should have access to the release repository
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
-          npm exec electron-builder -- --publish always --mac --win
+          npm exec electron-builder -- --publish always --mac
 
       - name: Publish draft release
         env:
