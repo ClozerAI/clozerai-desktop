@@ -23,12 +23,8 @@ on:
       - main
 
 jobs:
-  publish:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest]
+  build-windows:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout git repo
@@ -47,14 +43,12 @@ jobs:
           npm run build
 
       - name: Build Windows executables (without signing)
-        if: matrix.os == 'windows-latest'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
           npm exec electron-builder -- --publish never --win
 
       - name: Sign Windows executables with eSigner
-        if: matrix.os == 'windows-latest'
         uses: sslcom/esigner-codesign@develop
         with:
           command: sign
@@ -66,12 +60,10 @@ jobs:
           output_path: ${{ github.workspace }}/release/build/win-unpacked-signed
 
       - name: Copy signed executable back
-        if: matrix.os == 'windows-latest'
         run: |
           copy "${{ github.workspace }}/release/build/win-unpacked-signed/ClozerAI.exe" "${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe"
 
       - name: Find installer file
-        if: matrix.os == 'windows-latest'
         id: find-installer
         shell: powershell
         run: |
@@ -80,7 +72,6 @@ jobs:
           echo "Found installer file: $installerFile"
 
       - name: Sign Windows installer with eSigner
-        if: matrix.os == 'windows-latest'
         uses: sslcom/esigner-codesign@develop
         with:
           command: sign
@@ -92,20 +83,36 @@ jobs:
           output_path: ${{ github.workspace }}/release/build/signed
 
       - name: Copy signed installer back
-        if: matrix.os == 'windows-latest'
         run: |
           copy "${{ github.workspace }}/release/build/signed/${{ steps.find-installer.outputs.installer_file }}" "${{ github.workspace }}/release/build/"
 
-      - name: Rebuild Windows packages with signed executables
-        if: matrix.os == 'windows-latest'
+      - name: Upload Windows artifacts to draft release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
-          # Rebuild the packages with the signed executables to ensure blockmap matches
+          # Rebuild the packages with the signed executables and upload to draft release
           npm exec electron-builder -- --publish always --win --prepackaged ${{ github.workspace }}/release/build/win-unpacked
 
-      - name: Publish macOS releases
-        if: matrix.os == 'macos-latest'
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
+
+      - name: Install Node and NPM
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and build
+        run: |
+          npm install
+          npm run postinstall
+          npm run build
+
+      - name: Build and upload macOS artifacts to draft release
         env:
           # The APPLE_* values are used for auto updates signing
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -116,6 +123,14 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
           npm exec electron-builder -- --publish always --mac
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos]
+
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@v3
 
       - name: Publish draft release
         env:
