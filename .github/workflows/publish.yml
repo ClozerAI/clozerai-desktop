@@ -55,7 +55,7 @@ jobs:
 
       - name: Sign Windows executables with eSigner
         if: matrix.os == 'windows-latest'
-        uses: sslcom/actions-codesigner@develop
+        uses: sslcom/esigner-codesign@develop
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -64,11 +64,10 @@ jobs:
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe
           output_path: ${{ github.workspace }}/release/build/win-unpacked
-          override: true
 
       - name: Sign Windows installer with eSigner
         if: matrix.os == 'windows-latest'
-        uses: sslcom/actions-codesigner@develop
+        uses: sslcom/esigner-codesign@develop
         with:
           command: sign
           username: ${{ secrets.ES_USERNAME }}
@@ -77,7 +76,6 @@ jobs:
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}/release/build/ClozerAI Setup *.exe
           output_path: ${{ github.workspace }}/release/build
-          override: true
 
       - name: Rebuild Windows packages with signed executables
         if: matrix.os == 'windows-latest'
