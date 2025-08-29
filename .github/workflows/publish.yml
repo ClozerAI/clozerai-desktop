@@ -63,7 +63,12 @@ jobs:
           credential_id: ${{ secrets.CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe
-          output_path: ${{ github.workspace }}/release/build/win-unpacked
+          output_path: ${{ github.workspace }}/release/build/win-unpacked-signed
+
+      - name: Copy signed executable back
+        if: matrix.os == 'windows-latest'
+        run: |
+          copy "${{ github.workspace }}/release/build/win-unpacked-signed/ClozerAI.exe" "${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe"
 
       - name: Sign Windows installer with eSigner
         if: matrix.os == 'windows-latest'
@@ -75,7 +80,12 @@ jobs:
           credential_id: ${{ secrets.CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           file_path: ${{ github.workspace }}/release/build/ClozerAI Setup *.exe
-          output_path: ${{ github.workspace }}/release/build
+          output_path: ${{ github.workspace }}/release/build/signed
+
+      - name: Copy signed installer back
+        if: matrix.os == 'windows-latest'
+        run: |
+          copy "${{ github.workspace }}/release/build/signed/ClozerAI Setup *.exe" "${{ github.workspace }}/release/build/"
 
       - name: Rebuild Windows packages with signed executables
         if: matrix.os == 'windows-latest'
