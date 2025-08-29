@@ -42,11 +42,11 @@ jobs:
           npm run postinstall
           npm run build
 
-      - name: Build Windows executables (without signing)
+      - name: Build Windows unpacked directory (no installer)
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
         run: |
-          npm exec electron-builder -- --publish never --win
+          npm exec electron-builder -- --publish never --win dir
 
       - name: Sign Windows executables with eSigner
         uses: sslcom/esigner-codesign@develop
@@ -62,6 +62,12 @@ jobs:
       - name: Copy signed executable back
         run: |
           copy "${{ github.workspace }}/release/build/win-unpacked-signed/ClozerAI.exe" "${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe"
+
+      - name: Rebuild Windows installer from signed executable
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        run: |
+          npm exec electron-builder -- --publish never --win --prepackaged ${{ github.workspace }}/release/build/win-unpacked
 
       - name: Find installer file
         id: find-installer
@@ -89,9 +95,28 @@ jobs:
       - name: Upload Windows artifacts to draft release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+        shell: bash
         run: |
-          # Rebuild the packages with the signed executables and upload to draft release
-          npm exec electron-builder -- --publish always --win --prepackaged ${{ github.workspace }}/release/build/win-unpacked
+          set -euo pipefail
+
+          OWNER_REPO="clozerai/clozerai-desktop-releases"
+          VERSION=$(node -p "require('./package.json').version")
+
+          # Ensure there is a draft release (create if missing)
+          RELEASE_ID=$(gh api repos/$OWNER_REPO/releases --jq '.[] | select(.draft == true) | .id' | head -1 || true)
+          if [ -z "${RELEASE_ID:-}" ]; then
+            gh release create "v$VERSION" --draft --title "v$VERSION" --repo "$OWNER_REPO"
+          fi
+
+          INSTALLER_PATH="${{ github.workspace }}/release/build/${{ steps.find-installer.outputs.installer_file }}"
+          BLOCKMAP_PATH="${INSTALLER_PATH}.blockmap"
+          LATEST_YML_PATH="${{ github.workspace }}/release/build/latest.yml"
+
+          files=("$INSTALLER_PATH")
+          if [ -f "$BLOCKMAP_PATH" ]; then files+=("$BLOCKMAP_PATH"); fi
+          if [ -f "$LATEST_YML_PATH" ]; then files+=("$LATEST_YML_PATH"); fi
+
+          gh release upload "v$VERSION" "${files[@]}" --repo "$OWNER_REPO" --clobber
 
   build-macos:
     runs-on: macos-latest
