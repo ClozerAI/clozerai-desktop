@@ -1496,7 +1496,7 @@ export default function App() {
               {isLoadingBuiltInPrompts || isLoadingRealTimePrompts ? (
                 <span>Loading prompts...</span>
               ) : allPrompts && allPrompts.length > 0 ? (
-                <div className="flex flex-row items-center gap-2">
+                <div className="flex flex-row flex-wrap items-center justify-center gap-2">
                   {allPrompts
                     .filter(
                       (prompt) =>
