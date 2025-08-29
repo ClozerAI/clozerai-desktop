@@ -70,6 +70,15 @@ jobs:
         run: |
           copy "${{ github.workspace }}/release/build/win-unpacked-signed/ClozerAI.exe" "${{ github.workspace }}/release/build/win-unpacked/ClozerAI.exe"
 
+      - name: Find installer file
+        if: matrix.os == 'windows-latest'
+        id: find-installer
+        shell: powershell
+        run: |
+          $installerFile = Get-ChildItem -Path "${{ github.workspace }}/release/build/" -Name "ClozerAI Setup *.exe" | Select-Object -First 1
+          echo "installer_file=$installerFile" >> $env:GITHUB_OUTPUT
+          echo "Found installer file: $installerFile"
+
       - name: Sign Windows installer with eSigner
         if: matrix.os == 'windows-latest'
         uses: sslcom/esigner-codesign@develop
@@ -79,13 +88,13 @@ jobs:
           password: ${{ secrets.ES_PASSWORD }}
           credential_id: ${{ secrets.CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: ${{ github.workspace }}/release/build/ClozerAI Setup *.exe
+          file_path: ${{ github.workspace }}/release/build/${{ steps.find-installer.outputs.installer_file }}
           output_path: ${{ github.workspace }}/release/build/signed
 
       - name: Copy signed installer back
         if: matrix.os == 'windows-latest'
         run: |
-          copy "${{ github.workspace }}/release/build/signed/ClozerAI Setup *.exe" "${{ github.workspace }}/release/build/"
+          copy "${{ github.workspace }}/release/build/signed/${{ steps.find-installer.outputs.installer_file }}" "${{ github.workspace }}/release/build/"
 
       - name: Rebuild Windows packages with signed executables
         if: matrix.os == 'windows-latest'
