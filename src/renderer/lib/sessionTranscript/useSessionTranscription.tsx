@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import useAudioTapMac, { Status } from './useAudioTapMac';
-import useWindowsAudioTapTranscription from './useWindowsAudioTapTranscription';
+import useAudioTapWindows from './useAudioTapWindows';
 import useCombinedTranscript from './useCombinedTranscript';
 import { CreateMessage, Message, useChat } from '@ai-sdk/react';
 import { useMutation } from '@tanstack/react-query';
@@ -80,10 +80,7 @@ export default function useSessionTranscription({
   const [startingMicrophoneTranscription, setStartingMicrophoneTranscription] =
     useState(false);
 
-  const [
-    startingWindowsAudioTapTranscription,
-    setStartingWindowsAudioTapTranscription,
-  ] = useState(false);
+  const [startingAudioTapWindows, setStartingAudioTapWindows] = useState(false);
 
   // Combined transcript management
   const {
@@ -113,10 +110,10 @@ export default function useSessionTranscription({
   // audio tap windows transcription hook
   const {
     isRecording: isRecordingWindowsAudioTap,
-    startTranscription: startWindowsAudioTapTranscription,
+    startTranscription: startAudioTapWindows,
     stopRecording: stopWindowsAudioTapRecording,
     switchApiKey: switchWindowsAudioTapApiKey,
-  } = useWindowsAudioTapTranscription(
+  } = useAudioTapWindows(
     (transcript) => {
       if (!transcript) return;
       addToCombinedTranscript(transcript, 'share', false);
@@ -282,7 +279,7 @@ export default function useSessionTranscription({
     if (!callSession) return;
 
     if (isWindows) {
-      setStartingWindowsAudioTapTranscription(true);
+      setStartingAudioTapWindows(true);
     }
 
     try {
@@ -303,7 +300,7 @@ export default function useSessionTranscription({
       }
 
       if (isWindows) {
-        await startWindowsAudioTapTranscription(
+        await startAudioTapWindows(
           speechmaticsApiKey!,
           callSession.language,
           callSession.dictionaryEntries || [],
@@ -312,7 +309,7 @@ export default function useSessionTranscription({
     } catch (error) {
       console.error('Audio tap transcription error:', error);
     } finally {
-      setStartingWindowsAudioTapTranscription(false);
+      setStartingAudioTapWindows(false);
     }
   }, [callSession, generateSpeechmaticsSession, startAudioTapMacTranscription]);
 
@@ -574,8 +571,7 @@ export default function useSessionTranscription({
     isRecordingAudioTap:
       audioTapMacStatus === Status.RECORDING || isRecordingWindowsAudioTap,
     startingAudioTap:
-      audioTapMacStatus === Status.STARTING ||
-      startingWindowsAudioTapTranscription,
+      audioTapMacStatus === Status.STARTING || startingAudioTapWindows,
     handleStartAudioTapTranscription,
     stopAudioTapRecording: handleStopAudioTapTranscription,
 

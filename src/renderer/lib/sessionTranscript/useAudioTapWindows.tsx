@@ -9,7 +9,7 @@ import {
 } from './useMicrophoneTranscription';
 import { RealtimeClient } from '@speechmatics/real-time-client';
 
-export default function useWindowsAudioTapTranscription(
+export default function useAudioTapWindows(
   onNewTranscript: (transcript: string) => void,
   onNewPartialTranscript: (partialTranscript: string) => void,
 ) {
