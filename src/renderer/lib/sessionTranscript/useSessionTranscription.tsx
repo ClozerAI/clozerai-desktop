@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import useAudioTap, { Status } from './useAudioTap';
-import useMicrophoneTranscription from './useMicrophoneTranscription';
+import useWindowsAudioTapTranscription from './useWindowsAudioTapTranscription';
 import useCombinedTranscript from './useCombinedTranscript';
 import { CreateMessage, Message, useChat } from '@ai-sdk/react';
 import { useMutation } from '@tanstack/react-query';
@@ -109,7 +109,7 @@ export default function useSessionTranscription({
     startTranscription: startMicrophoneTranscription,
     stopRecording: stopMicrophoneRecording,
     switchApiKey: switchMicrophoneApiKey,
-  } = useMicrophoneTranscription(
+  } = useWindowsAudioTapTranscription(
     (transcript) => {
       if (!transcript) return;
 

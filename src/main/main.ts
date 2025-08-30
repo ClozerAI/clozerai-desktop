@@ -15,6 +15,8 @@ import {
   screen,
   globalShortcut,
   clipboard,
+  session,
+  desktopCapturer,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
@@ -705,6 +707,22 @@ app.whenReady().then(async () => {
   app.setAsDefaultProtocolClient('clozerai');
 
   createWindow();
+
+  // Enable display media capture with system audio (loopback). This helps
+  // getDisplayMedia({ audio: true }) in the renderer capture system audio on Windows.
+  try {
+    session.defaultSession.setDisplayMediaRequestHandler(
+      (_request, callback) => {
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+          // Grant access to the first screen and enable loopback audio
+          callback({ video: sources[0], audio: 'loopback' as any });
+        });
+      },
+      { useSystemPicker: true },
+    );
+  } catch (e) {
+    log.warn('Failed to set display media request handler:', e);
+  }
 
   // Register global shortcuts for both macOS and Windows
   if (process.platform === 'darwin') {
