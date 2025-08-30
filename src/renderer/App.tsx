@@ -900,7 +900,6 @@ export default function App() {
                         disabled={
                           updateStatus === 'checking' ||
                           updateStatus === 'downloading' ||
-                          (isWindows && !releaseData?.downloads?.windows) ||
                           (isMac && updateStatus === 'available')
                         }
                         onClick={handleUpdateButtonClick}
