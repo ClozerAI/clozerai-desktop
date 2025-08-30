@@ -180,6 +180,9 @@
           "ia32",
           "arm64"
         ]
+      },
+      "signtoolOptions": {
+        "sign": "./CodeSignTool/ssl-esigner-sign.js"
       }
     },
     "linux": {
