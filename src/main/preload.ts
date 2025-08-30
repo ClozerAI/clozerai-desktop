@@ -1,10 +1,10 @@
-import { Status } from '@/renderer/lib/sessionTranscript/useAudioTap';
+import { Status } from '@/renderer/lib/sessionTranscript/useAudioTapMac';
 import { DictionaryEntry } from '@/renderer/lib/sessionTranscript/transcriptTypes';
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels =
   | 'ipc-toggle-ignore-mouse-events'
-  | 'ipc-start-audio-tap'
+  | 'ipc-start-mac-audio-tap'
   | 'ipc-stop-audio-tap'
   | 'ipc-audio-tap-status'
   | 'ipc-audio-tap-partial-transcript'
@@ -62,13 +62,13 @@ const electronHandler = {
     async captureScreenshot(): Promise<string> {
       return ipcRenderer.invoke('ipc-capture-screenshot');
     },
-    async startAudioTap(
+    async startAudioTapMac(
       speechmaticsApiKey: string,
       language: string,
       dictionaryEntries: DictionaryEntry[],
     ): Promise<Status> {
       return ipcRenderer.invoke(
-        'ipc-start-audio-tap',
+        'ipc-start-mac-audio-tap',
         speechmaticsApiKey,
         language,
         dictionaryEntries,
