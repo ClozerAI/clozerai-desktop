@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import useAudioTap, { Status } from './useAudioTapMac';
+import useAudioTapMac, { Status } from './useAudioTapMac';
 import useWindowsAudioTapTranscription from './useWindowsAudioTapTranscription';
 import useCombinedTranscript from './useCombinedTranscript';
 import { CreateMessage, Message, useChat } from '@ai-sdk/react';
@@ -80,6 +80,11 @@ export default function useSessionTranscription({
   const [startingMicrophoneTranscription, setStartingMicrophoneTranscription] =
     useState(false);
 
+  const [
+    startingWindowsAudioTapTranscription,
+    setStartingWindowsAudioTapTranscription,
+  ] = useState(false);
+
   // Combined transcript management
   const {
     addTranscript: addToCombinedTranscript,
@@ -90,11 +95,11 @@ export default function useSessionTranscription({
 
   // audio tap mac transcription hook
   const {
-    status: audioTapStatus,
-    startTranscription: startAudioTapTranscription,
-    stopRecording: stopAudioTapRecording,
-    switchApiKey: switchAudioTapApiKey,
-  } = useAudioTap(
+    status: audioTapMacStatus,
+    startTranscription: startAudioTapMacTranscription,
+    stopRecording: stopAudioTapMacRecording,
+    switchApiKey: switchAudioTapMacApiKey,
+  } = useAudioTapMac(
     (transcript) => {
       if (!transcript) return;
 
@@ -123,7 +128,7 @@ export default function useSessionTranscription({
 
   function handleStopAudioTapTranscription() {
     if (isMac) {
-      stopAudioTapRecording();
+      stopAudioTapMacRecording();
     }
 
     if (isWindows) {
@@ -241,13 +246,26 @@ export default function useSessionTranscription({
   ) {
     let speechmaticsApiKey = newCallSession?.speechmaticsApiKey!;
 
-    if (audioTapStatus === Status.RECORDING) {
-      switchAudioTapApiKey(
-        speechmaticsApiKey!,
-        newCallSession.language,
-        newCallSession.dictionaryEntries,
-      );
+    if (isMac) {
+      if (audioTapMacStatus === Status.RECORDING) {
+        switchAudioTapMacApiKey(
+          speechmaticsApiKey!,
+          newCallSession.language,
+          newCallSession.dictionaryEntries,
+        );
+      }
     }
+
+    if (isWindows) {
+      if (isRecordingWindowsAudioTap) {
+        switchWindowsAudioTapApiKey(
+          speechmaticsApiKey!,
+          newCallSession.language,
+          newCallSession.dictionaryEntries,
+        );
+      }
+    }
+
     if (isRecordingMicrophone) {
       switchMicrophoneApiKey(
         speechmaticsApiKey!,
@@ -263,6 +281,10 @@ export default function useSessionTranscription({
   const handleStartAudioTapTranscription = useCallback(async () => {
     if (!callSession) return;
 
+    if (isWindows) {
+      setStartingWindowsAudioTapTranscription(true);
+    }
+
     try {
       let speechmaticsApiKey = callSession.speechmaticsApiKey;
       if (!speechmaticsApiKey) {
@@ -273,7 +295,7 @@ export default function useSessionTranscription({
       }
 
       if (isMac) {
-        await startAudioTapTranscription(
+        await startAudioTapMacTranscription(
           speechmaticsApiKey!,
           callSession.language,
           callSession.dictionaryEntries || [],
@@ -289,8 +311,10 @@ export default function useSessionTranscription({
       }
     } catch (error) {
       console.error('Audio tap transcription error:', error);
+    } finally {
+      setStartingWindowsAudioTapTranscription(false);
     }
-  }, [callSession, generateSpeechmaticsSession, startAudioTapTranscription]);
+  }, [callSession, generateSpeechmaticsSession, startAudioTapMacTranscription]);
 
   // Start microphone transcription
   const handleStartMicrophoneTranscription = useCallback(async () => {
@@ -419,9 +443,16 @@ export default function useSessionTranscription({
 
   // Stop all recordings
   const handleStopAllRecording = useCallback(() => {
-    stopAudioTapRecording();
+    if (isMac) {
+      stopAudioTapMacRecording();
+    }
+
+    if (isWindows) {
+      stopWindowsAudioTapRecording();
+    }
+
     stopMicrophoneRecording();
-  }, [stopAudioTapRecording, stopMicrophoneRecording]);
+  }, [stopAudioTapMacRecording, stopMicrophoneRecording]);
 
   // Clear all chat messages
   const handleClearAllAnswers = useCallback(() => {
@@ -432,7 +463,14 @@ export default function useSessionTranscription({
   // Reset all session state - for when exiting with active session
   const handleResetSession = useCallback(() => {
     // Stop all recording
-    stopAudioTapRecording();
+    if (isMac) {
+      stopAudioTapMacRecording();
+    }
+
+    if (isWindows) {
+      stopWindowsAudioTapRecording();
+    }
+
     stopMicrophoneRecording();
 
     // Clear all AI messages and chat
@@ -445,7 +483,8 @@ export default function useSessionTranscription({
     // Clear chat input
     setChatInput('');
   }, [
-    stopAudioTapRecording,
+    stopAudioTapMacRecording,
+    stopWindowsAudioTapRecording,
     stopMicrophoneRecording,
     stop,
     setMessages,
@@ -468,7 +507,7 @@ export default function useSessionTranscription({
     if (callSession?.hasEnded) {
       handleStopAllRecording();
     }
-  }, [callSession?.hasEnded, stopAudioTapRecording, stopMicrophoneRecording]);
+  }, [callSession?.hasEnded, handleStopAllRecording]);
 
   // Auto-extension logic
   useEffect(() => {
@@ -533,9 +572,10 @@ export default function useSessionTranscription({
 
     // Audio tap transcription
     isRecordingAudioTap:
-      audioTapStatus === Status.RECORDING || isRecordingWindowsAudioTap,
+      audioTapMacStatus === Status.RECORDING || isRecordingWindowsAudioTap,
     startingAudioTap:
-      audioTapStatus === Status.STARTING || isRecordingWindowsAudioTap,
+      audioTapMacStatus === Status.STARTING ||
+      startingWindowsAudioTapTranscription,
     handleStartAudioTapTranscription,
     stopAudioTapRecording: handleStopAudioTapTranscription,
 

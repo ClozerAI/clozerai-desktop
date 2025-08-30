@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 export type Channels =
   | 'ipc-toggle-ignore-mouse-events'
-  | 'ipc-start-mac-audio-tap'
+  | 'ipc-start-audio-tap-mac'
   | 'ipc-stop-audio-tap'
   | 'ipc-audio-tap-status'
   | 'ipc-audio-tap-partial-transcript'
@@ -68,7 +68,7 @@ const electronHandler = {
       dictionaryEntries: DictionaryEntry[],
     ): Promise<Status> {
       return ipcRenderer.invoke(
-        'ipc-start-mac-audio-tap',
+        'ipc-start-audio-tap-mac',
         speechmaticsApiKey,
         language,
         dictionaryEntries,

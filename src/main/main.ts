@@ -202,7 +202,7 @@ ipcMain.on('ipc-quit-app', () => {
 
 // Request-response handlers (convert to .handle)
 ipcMain.handle(
-  'ipc-start-mac-audio-tap',
+  'ipc-start-audio-tap-mac',
   async (_, speechmaticsApiKey, language, dictionaryEntries) => {
     // Always cleanup any existing instance first to prevent conflicts
     if (audioTapInstance) {

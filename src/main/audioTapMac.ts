@@ -12,7 +12,7 @@ import { DictionaryEntry } from '@/renderer/lib/sessionTranscript/transcriptType
 interface AudioTapConfig {
   speechmaticsApiKey: string;
   language: string;
-  dictionaryEntries?: DictionaryEntry[];
+  dictionaryEntries: DictionaryEntry[];
   onPartial?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: Error) => void;
@@ -362,7 +362,7 @@ export const startAudioTapMac: StartAudioTap = async ({
                 operating_point: 'enhanced',
                 enable_partials: true,
                 max_delay: 1,
-                additional_vocab: (dictionaryEntries || []).map((entry) => ({
+                additional_vocab: dictionaryEntries.map((entry) => ({
                   content: entry.word,
                   sounds_like: entry.pronunciation
                     .split(',')
