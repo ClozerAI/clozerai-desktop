@@ -311,7 +311,12 @@ export default function useSessionTranscription({
     } finally {
       setStartingAudioTapWindows(false);
     }
-  }, [callSession, generateSpeechmaticsSession, startAudioTapMacTranscription]);
+  }, [
+    callSession,
+    generateSpeechmaticsSession,
+    startAudioTapMacTranscription,
+    startAudioTapWindows,
+  ]);
 
   // Start microphone transcription
   const handleStartMicrophoneTranscription = useCallback(async () => {
@@ -449,7 +454,11 @@ export default function useSessionTranscription({
     }
 
     stopMicrophoneRecording();
-  }, [stopAudioTapMacRecording, stopMicrophoneRecording]);
+  }, [
+    stopAudioTapMacRecording,
+    stopWindowsAudioTapRecording,
+    stopMicrophoneRecording,
+  ]);
 
   // Clear all chat messages
   const handleClearAllAnswers = useCallback(() => {
