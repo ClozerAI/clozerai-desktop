@@ -158,7 +158,11 @@ export default function useAudioTapWindows(
 
       // Request system audio via display media (loopback). Video track is minimized.
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
         // Some platforms require video to be requested; keep it tiny to minimize overhead.
         video: {
           width: 1,
