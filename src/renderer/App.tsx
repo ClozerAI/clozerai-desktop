@@ -22,7 +22,7 @@ import {
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 import SessionTimerTooltip from './components/SessionTimerTooltip';
-import { Status } from './lib/sessionTranscript/useAudioTap';
+import { Status } from './lib/sessionTranscript/useAudioTapMac';
 import icon from '../../assets/icon.png';
 import iconNoText from '../../assets/iconNoText.png';
 
@@ -47,8 +47,8 @@ import {
 } from './components/ui/select';
 import { toast } from 'sonner';
 
-const isMac = window.electron?.platform === 'darwin';
-const isWindows = window.electron?.platform === 'win32';
+export const isMac = window.electron?.platform === 'darwin';
+export const isWindows = window.electron?.platform === 'win32';
 
 function ShortcutIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return isMac ? <Command className={className} /> : 'Ctrl';
@@ -132,7 +132,8 @@ export default function App() {
     canAutoExtend,
 
     // Audio tap transcription
-    audioTapStatus,
+    isRecordingAudioTap,
+    startingAudioTap,
     handleStartAudioTapTranscription,
     stopAudioTapRecording,
 
@@ -758,7 +759,7 @@ export default function App() {
                     <ShortcutIcon /> + E
                   </TooltipContent>
                 </Tooltip>
-                {audioTapStatus === Status.RECORDING && (
+                {isRecordingAudioTap && (
                   <Button
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
@@ -1101,7 +1102,7 @@ export default function App() {
                   canExtend={hasActiveSubscription}
                 />
               )}
-              {activatedSession && audioTapStatus === Status.RECORDING ? (
+              {activatedSession && isRecordingAudioTap ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -1133,11 +1134,9 @@ export default function App() {
                         onMouseLeave={onMouseLeave}
                         size="sm"
                         onClick={handleStartAudioTapTranscription}
-                        disabled={audioTapStatus === Status.STARTING}
+                        disabled={startingAudioTap}
                       >
-                        {audioTapStatus === Status.STARTING
-                          ? 'Connecting...'
-                          : 'Start'}
+                        {startingAudioTap ? 'Connecting...' : 'Start'}
                         <Laptop className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
@@ -1216,7 +1215,7 @@ export default function App() {
             </div>
           </div>
           {activatedSession &&
-            (audioTapStatus === Status.RECORDING || isRecordingMicrophone) && (
+            (isRecordingAudioTap || isRecordingMicrophone) && (
               <div className="min-h-8 w-full text-white text-center flex flex-row items-center justify-center">
                 <div className="relative h-8 w-full overflow-hidden">
                   <div className="text-white absolute right-0 min-w-full items-center whitespace-nowrap flex flex-row gap-1">
@@ -1249,7 +1248,7 @@ export default function App() {
                         <CombinedTranscriptBubbles
                           combinedTranscript={combinedTranscript}
                           isRecordingMicrophone={isRecordingMicrophone}
-                          isRecordingShare={audioTapStatus === Status.RECORDING}
+                          isRecordingShare={isRecordingAudioTap}
                           onMouseEnter={onMouseEnter}
                           onMouseLeave={onMouseLeave}
                         />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { DictionaryEntry } from './transcriptTypes';
 
@@ -8,7 +8,7 @@ export enum Status {
   RECORDING = 'recording',
 }
 
-export default function useAudioTap(
+export default function useAudioTapMac(
   onNewTranscript: (transcript: string) => void,
   onNewPartialTranscript: (partialTranscript: string) => void,
 ) {
@@ -85,7 +85,7 @@ export default function useAudioTap(
     setStatus(Status.STARTING);
 
     try {
-      const response = await window.electron?.ipcRenderer.startAudioTap(
+      const response = await window.electron?.ipcRenderer.startAudioTapMac(
         apiKey,
         language,
         dictionaryEntries,

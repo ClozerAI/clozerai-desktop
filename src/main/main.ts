@@ -15,16 +15,17 @@ import {
   screen,
   globalShortcut,
   clipboard,
+  session,
+  desktopCapturer,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import { resolveHtmlPath } from './util';
 import getAssetPath from './getAssetPath';
-import { startAudioTapMac } from './audioTap/audioTapMac';
-import { startAudioTapWin } from './audioTap/audioTapWin';
-import { Status } from '@/renderer/lib/sessionTranscript/useAudioTap';
+import { startAudioTapMac } from './audioTapMac';
+import { Status } from '@/renderer/lib/sessionTranscript/useAudioTapMac';
 import screenshot from 'screenshot-desktop';
-import { AudioTapResult } from './audioTap/audioTapBase';
+import { AudioTapResult } from './audioTapMac';
 import { WebSocket } from 'ws';
 import { NEXTJS_API_URL } from '@/renderer/lib/trpc/react';
 
@@ -201,7 +202,7 @@ ipcMain.on('ipc-quit-app', () => {
 
 // Request-response handlers (convert to .handle)
 ipcMain.handle(
-  'ipc-start-audio-tap',
+  'ipc-start-audio-tap-mac',
   async (_, speechmaticsApiKey, language, dictionaryEntries) => {
     // Always cleanup any existing instance first to prevent conflicts
     if (audioTapInstance) {
@@ -245,15 +246,7 @@ ipcMain.handle(
       };
 
       // Use the appropriate audio tap implementation based on platform
-      if (process.platform === 'darwin') {
-        audioTapInstance = await startAudioTapMac(audioTapConfig);
-      } else if (isWindows) {
-        audioTapInstance = await startAudioTapWin(audioTapConfig);
-      } else {
-        throw new Error(
-          `Unsupported platform: ${process.platform}. ClozerAI Desktop only supports macOS and Windows.`,
-        );
-      }
+      audioTapInstance = await startAudioTapMac(audioTapConfig);
 
       return Status.RECORDING;
     } catch (error) {
@@ -705,6 +698,22 @@ app.whenReady().then(async () => {
   app.setAsDefaultProtocolClient('clozerai');
 
   createWindow();
+
+  // Enable display media capture with system audio (loopback). This helps
+  // getDisplayMedia({ audio: true }) in the renderer capture system audio on Windows.
+  try {
+    session.defaultSession.setDisplayMediaRequestHandler(
+      (_request, callback) => {
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+          // Grant access to the first screen and enable loopback audio
+          callback({ video: sources[0], audio: 'loopback' as any });
+        });
+      },
+      { useSystemPicker: true },
+    );
+  } catch (e) {
+    log.warn('Failed to set display media request handler:', e);
+  }
 
   // Register global shortcuts for both macOS and Windows
   if (process.platform === 'darwin') {
