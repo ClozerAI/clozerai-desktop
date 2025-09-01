@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from './components/ui/select';
 import { toast } from 'sonner';
+import CallScriptSelector from './components/CallScriptSelector';
 
 export const isMac = window.electron?.platform === 'darwin';
 export const isWindows = window.electron?.platform === 'win32';
@@ -89,6 +90,7 @@ export default function App() {
         // Reset Quick Start input form
         setShowQuickStartInput(false);
         setClientName('');
+        setSelectedScriptId(null);
       },
     });
 
@@ -111,6 +113,7 @@ export default function App() {
   const [clientName, setClientName] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] =
     useState<TranscriptionLanguage>(DEFAULT_LANGUAGE);
+  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
 
   // Manual auth token state
   const [showEnterTokenManually, setShowEnterTokenManually] = useState(false);
@@ -198,7 +201,16 @@ export default function App() {
     if (lastLang) {
       setSelectedLanguage(lastLang);
     }
-  }, [lastSessions?.data?.[0]?.language]);
+
+    // Prefill script from last session
+    const lastScriptId = lastSessions?.data?.[0]?.callScriptId;
+    if (lastScriptId) {
+      setSelectedScriptId(lastScriptId);
+    }
+  }, [
+    lastSessions?.data?.[0]?.language,
+    lastSessions?.data?.[0]?.callScriptId,
+  ]);
 
   const allPrompts = [
     ...(realTimePrompts || []).map((p) => ({
@@ -1327,80 +1339,105 @@ export default function App() {
               </Button>
             </div>
           )}
-          {showQuickStartInput && !callSession && (
-            <div className="flex flex-row items-center gap-2 w-full justify-center">
-              <Input
-                placeholder="Client Name (optional)"
-                className="bg-white w-full max-w-2xs"
-                value={clientName}
+          {showQuickStartInput && !callSession && loggedIn && (
+            <div className="flex flex-col items-center gap-3 w-full max-w-md mx-auto p-4 bg-black/50 rounded-lg">
+              <div className="flex flex-col gap-y-1 w-full">
+                <div className="text-sm text-white/80 flex items-center gap-1">
+                  Client Name
+                  <span className="text-white/60 text-xs">(Optional)</span>
+                </div>
+                <Input
+                  placeholder="Client Name (optional)"
+                  className="bg-white w-full"
+                  value={clientName}
+                  disabled={isCreatingCallSession}
+                  onChange={(e) => setClientName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (!isCreatingCallSession) {
+                        createCallSession({
+                          trial: !hasActiveSubscription,
+                          clientName: clientName.trim() || undefined,
+                          language: selectedLanguage,
+                          callScriptId: selectedScriptId,
+                        });
+                      }
+                    }
+                  }}
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                />
+              </div>
+              <div className="flex flex-col gap-y-1 w-full">
+                <div className="text-sm text-white/80 flex items-center gap-1">
+                  Language
+                </div>
+                <Select
+                  value={selectedLanguage}
+                  onValueChange={(value) =>
+                    setSelectedLanguage(value as TranscriptionLanguage)
+                  }
+                  disabled={isCreatingCallSession || isLoadingLastSessions}
+                >
+                  <SelectTrigger
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    className="bg-white text-black min-w-[120px] w-full"
+                  >
+                    <SelectValue placeholder="Language..." />
+                  </SelectTrigger>
+                  <SelectContent
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                  >
+                    {Object.values(TranscriptionLanguage).map((lang) => (
+                      <SelectItem key={lang} value={lang}>
+                        {transcriptionLanguageMap[lang]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <CallScriptSelector
+                selectedScriptId={selectedScriptId}
+                onScriptChange={setSelectedScriptId}
                 disabled={isCreatingCallSession}
-                onChange={(e) => setClientName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+              />
+
+              <div className="flex flex-row items-center gap-2 w-full justify-center">
+                <Button
+                  onClick={() => {
                     if (!isCreatingCallSession) {
                       createCallSession({
                         trial: !hasActiveSubscription,
                         clientName: clientName.trim() || undefined,
                         language: selectedLanguage,
+                        callScriptId: selectedScriptId,
                       });
                     }
-                  }
-                }}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-              />
-              <Select
-                value={selectedLanguage}
-                onValueChange={(value) =>
-                  setSelectedLanguage(value as TranscriptionLanguage)
-                }
-                disabled={isCreatingCallSession || isLoadingLastSessions}
-              >
-                <SelectTrigger
+                  }}
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
-                  className="bg-white text-black"
+                  disabled={isCreatingCallSession}
                 >
-                  <SelectValue placeholder="Select language..." />
-                </SelectTrigger>
-                <SelectContent
+                  {isCreatingCallSession ? 'Creating...' : 'Create'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowQuickStartInput(false);
+                    setClientName('');
+                    setSelectedScriptId(null);
+                  }}
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
+                  disabled={isCreatingCallSession}
                 >
-                  {Object.values(TranscriptionLanguage).map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {transcriptionLanguageMap[lang]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={() => {
-                  if (!isCreatingCallSession) {
-                    createCallSession({
-                      trial: !hasActiveSubscription,
-                      clientName: clientName.trim() || undefined,
-                      language: selectedLanguage,
-                    });
-                  }
-                }}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                disabled={isCreatingCallSession}
-              >
-                {isCreatingCallSession ? 'Creating...' : 'Create'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowQuickStartInput(false);
-                  setClientName('');
-                }}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                disabled={isCreatingCallSession}
-              >
-                Cancel
-              </Button>
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
           {showEnterTokenManually && userError && (
