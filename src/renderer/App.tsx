@@ -410,38 +410,6 @@ export default function App() {
   } | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
-  // Add function to handle logo clicks
-  const handleLogoClick = (event: React.MouseEvent<HTMLImageElement>) => {
-    // Only proceed if Command key is held
-    if (!event.metaKey) {
-      setLogoClickCount(0); // Optionally reset if not held
-      return;
-    }
-    const newCount = logoClickCount + 1;
-    setLogoClickCount(newCount);
-
-    // Clear existing timeout
-    if (logoClickTimeoutRef.current) {
-      clearTimeout(logoClickTimeoutRef.current);
-    }
-
-    if (newCount === 5) {
-      // Toggle content protection after 5 clicks
-      const newState = !contentProtectionDisabled;
-      setContentProtectionDisabled(newState);
-      window.electron?.ipcRenderer.sendMessage(
-        'ipc-toggle-content-protection',
-        newState,
-      );
-      setLogoClickCount(0);
-    } else {
-      // Reset counter after 2 seconds if not reached 5 clicks
-      logoClickTimeoutRef.current = setTimeout(() => {
-        setLogoClickCount(0);
-      }, 2000);
-    }
-  };
-
   useEffect(() => {
     if (!window.electron?.ipcRenderer) return;
 
@@ -838,7 +806,6 @@ export default function App() {
                       width="102"
                       alt="icon"
                       src={icon}
-                      onClick={handleLogoClick}
                       onMouseEnter={onMouseEnter}
                       onMouseLeave={onMouseLeave}
                     />
@@ -847,7 +814,6 @@ export default function App() {
                       width="32"
                       alt="icon"
                       src={iconNoText}
-                      onClick={handleLogoClick}
                       onMouseEnter={onMouseEnter}
                       onMouseLeave={onMouseLeave}
                     />
