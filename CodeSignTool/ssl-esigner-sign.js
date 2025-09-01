@@ -3,6 +3,8 @@ const { execFileSync } = require('child_process');
 const path = require('path');
 
 exports.default = async function (cfg) {
+  // TODO: Remove this once we have a valid certificate
+  return;
   if (!cfg.path) return; // electron-builder calls this many times; only act when there's a file path
   const file = String(cfg.path);
 
