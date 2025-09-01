@@ -9,6 +9,17 @@ exports.default = async function (cfg) {
   if (!cfg.path) return; // electron-builder calls this many times; only act when there's a file path
   const file = String(cfg.path);
 
+  // Only sign the final installer/setup files, not individual app files
+  const isInstallerFile = /Setup.*\.exe$/i.test(path.basename(file));
+  if (!isInstallerFile) {
+    console.log(
+      `Skipping code signing for: ${file} (not an installer file with "Setup" in name ending with .exe)`,
+    );
+    return;
+  }
+
+  console.log(`Code signing installer: ${file}`);
+
   const TOOL = path.join(__dirname, 'CodeSignTool.sh');
 
   // Read secrets from env (set these in your CI)
