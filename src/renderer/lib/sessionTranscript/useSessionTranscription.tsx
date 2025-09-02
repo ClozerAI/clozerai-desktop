@@ -161,6 +161,12 @@ export default function useSessionTranscription({
       userId: callSession?.userId,
       workspaceId: callSession?.workspaceId,
     },
+    fetch: (url, options) => {
+      return fetch(url, {
+        ...options,
+        credentials: 'include',
+      });
+    },
     onError: (error) => {
       toast.error(error.message);
     },

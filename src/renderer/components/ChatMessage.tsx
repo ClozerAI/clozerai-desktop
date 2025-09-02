@@ -61,7 +61,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           </table>
         </div>
       ),
-      thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+      thead: ({ children }) => (
+        <thead className="bg-neutral-500/25">{children}</thead>
+      ),
       tbody: ({ children }) => <tbody>{children}</tbody>,
       tr: ({ children }) => (
         <tr className="border-b border-gray-200">{children}</tr>
