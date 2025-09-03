@@ -74,7 +74,7 @@ export const initializeSpeechmaticsSession = async (
       max_delay: 1,
       domain,
       audio_filtering_config: {
-        volume_threshold: 8,
+        volume_threshold: 6,
       },
       additional_vocab: dictionaryEntries.map((entry) => ({
         content: entry.word,
