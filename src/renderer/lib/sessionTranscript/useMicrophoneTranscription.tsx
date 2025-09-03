@@ -73,6 +73,9 @@ export const initializeSpeechmaticsSession = async (
       enable_partials: true,
       max_delay: 1,
       domain,
+      audio_filtering_config: {
+        volume_threshold: 8,
+      },
       additional_vocab: dictionaryEntries.map((entry) => ({
         content: entry.word,
         sounds_like: entry.pronunciation
