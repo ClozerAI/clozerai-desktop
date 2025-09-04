@@ -1,6 +1,6 @@
 {
   "name": "clozerai-desktop",
-  "version": "2.0.54",
+  "version": "2.0.55",
   "description": "ClozerAI Desktop App",
   "author": "ClozerAI",
   "main": "./dist/main/main.js",

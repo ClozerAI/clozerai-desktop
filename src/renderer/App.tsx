@@ -22,7 +22,6 @@ import {
 import { Button } from './components/ui/button';
 import { cn } from './lib/utils';
 import SessionTimerTooltip from './components/SessionTimerTooltip';
-import { Status } from './lib/sessionTranscript/useAudioTapMac';
 import icon from '../../assets/icon.png';
 import iconNoText from '../../assets/iconNoText.png';
 
@@ -34,19 +33,8 @@ import useSessionTranscription from './lib/sessionTranscript/useSessionTranscrip
 import CombinedTranscriptBubbles from './components/CombinedTranscriptBubbles';
 import ChatMessage from './components/ChatMessage';
 import { api, NEXTJS_API_URL } from './lib/trpc/react';
-import transcriptionLanguageMap, {
-  TranscriptionLanguage,
-} from './lib/transcriptLanguageMap';
-import { DEFAULT_LANGUAGE } from './lib/callSessionDefaults';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './components/ui/select';
 import { toast } from 'sonner';
-import CallScriptSelector from './components/CallScriptSelector';
+import CallSessionDialog from './components/CallSessionDialog';
 
 export const isMac = window.electron?.platform === 'darwin';
 export const isWindows = window.electron?.platform === 'win32';
@@ -82,18 +70,6 @@ export default function App() {
       ? user.currentWorkspace.hasActiveSubscription
       : user?.hasActiveSubscription) || false;
 
-  const { mutate: createCallSession, isPending: isCreatingCallSession } =
-    api.callSession.create.useMutation({
-      onSuccess: (data) => {
-        setCallSessionId(data.id);
-        utils.callSession.get.setData({ id: data.id }, data);
-        // Reset Quick Start input form
-        setShowQuickStartInput(false);
-        setClientName('');
-        setSelectedScriptId(null);
-      },
-    });
-
   const [hide, _setHide] = useState(false);
   const hideRef = useRef(false);
   const setHide = (value: boolean) => {
@@ -109,11 +85,25 @@ export default function App() {
   const [showEnterIdManually, setShowEnterIdManually] = useState(false);
 
   // Quick Start Session client name state
-  const [showQuickStartInput, setShowQuickStartInput] = useState(false);
-  const [clientName, setClientName] = useState<string>('');
-  const [selectedLanguage, setSelectedLanguage] =
-    useState<TranscriptionLanguage>(DEFAULT_LANGUAGE);
-  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
+  const [createCallSessionDialogOpen, _setCreateCallSessionDialogOpen] =
+    useState(false);
+
+  const setCreateCallSessionDialogOpen = (open: boolean) => {
+    if (open) {
+      window.electron?.ipcRenderer.sendMessage(
+        'ipc-toggle-ignore-mouse-events',
+        false,
+      );
+    } else {
+      console.error('onMouseLeave');
+      window.electron?.ipcRenderer.sendMessage(
+        'ipc-toggle-ignore-mouse-events',
+        true,
+      );
+    }
+
+    _setCreateCallSessionDialogOpen(open);
+  };
 
   // Manual auth token state
   const [showEnterTokenManually, setShowEnterTokenManually] = useState(false);
@@ -187,31 +177,6 @@ export default function App() {
 
   const realTimePrompts = realTimePromptsResponse?.data ?? [];
 
-  // Fetch last session to prefill language
-  const { data: lastSessions, isLoading: isLoadingLastSessions } =
-    api.callSession.getMany.useQuery(
-      { limit: 1, offset: 0 },
-      { enabled: !!loggedIn },
-    );
-
-  useEffect(() => {
-    const lastLang = lastSessions?.data?.[0]?.language as
-      | TranscriptionLanguage
-      | undefined;
-    if (lastLang) {
-      setSelectedLanguage(lastLang);
-    }
-
-    // Prefill script from last session
-    const lastScriptId = lastSessions?.data?.[0]?.callScriptId;
-    if (lastScriptId) {
-      setSelectedScriptId(lastScriptId);
-    }
-  }, [
-    lastSessions?.data?.[0]?.language,
-    lastSessions?.data?.[0]?.callScriptId,
-  ]);
-
   const allPrompts = [
     ...(realTimePrompts || []).map((p) => ({
       id: p.id,
@@ -233,6 +198,10 @@ export default function App() {
   }
 
   function onMouseLeave() {
+    if (createCallSessionDialogOpen) {
+      return;
+    }
+
     window.electron?.ipcRenderer.sendMessage(
       'ipc-toggle-ignore-mouse-events',
       true,
@@ -1248,7 +1217,7 @@ export default function App() {
             <div className="text-white bg-black/50 rounded-lg p-2 px-4">
               Create a session in the dashboard and click "Open in Desktop App"
               to start
-              {!showEnterIdManually && !showQuickStartInput && loggedIn && (
+              {!showEnterIdManually && loggedIn && (
                 <>
                   {' '}
                   or{' '}
@@ -1262,18 +1231,20 @@ export default function App() {
                   </Button>
                 </>
               )}
-              {!showEnterIdManually && !showQuickStartInput && loggedIn && (
+              {!showEnterIdManually && loggedIn && (
                 <>
                   {' '}
                   or{' '}
-                  <Button
-                    onClick={() => setShowQuickStartInput(true)}
+                  <CallSessionDialog
+                    open={createCallSessionDialogOpen}
+                    setOpen={setCreateCallSessionDialogOpen}
+                    onCreated={(callSessionId) =>
+                      setCallSessionId(callSessionId)
+                    }
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
-                    size="sm"
-                  >
-                    Quick Start Session
-                  </Button>
+                    isTrial={!hasActiveSubscription}
+                  />
                 </>
               )}
               {loadingUser ? (
@@ -1337,107 +1308,6 @@ export default function App() {
               >
                 Cancel
               </Button>
-            </div>
-          )}
-          {showQuickStartInput && !callSession && loggedIn && (
-            <div className="flex flex-col items-center gap-3 w-full max-w-md mx-auto p-4 bg-black/50 rounded-lg">
-              <div className="flex flex-col gap-y-1 w-full">
-                <div className="text-sm text-white/80 flex items-center gap-1">
-                  Client Name
-                  <span className="text-white/60 text-xs">(Optional)</span>
-                </div>
-                <Input
-                  placeholder="Client Name (optional)"
-                  className="bg-white w-full"
-                  value={clientName}
-                  disabled={isCreatingCallSession}
-                  onChange={(e) => setClientName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (!isCreatingCallSession) {
-                        createCallSession({
-                          trial: !hasActiveSubscription,
-                          clientName: clientName.trim() || undefined,
-                          language: selectedLanguage,
-                          callScriptId: selectedScriptId,
-                        });
-                      }
-                    }
-                  }}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                />
-              </div>
-              <div className="flex flex-col gap-y-1 w-full">
-                <div className="text-sm text-white/80 flex items-center gap-1">
-                  Language
-                </div>
-                <Select
-                  value={selectedLanguage}
-                  onValueChange={(value) =>
-                    setSelectedLanguage(value as TranscriptionLanguage)
-                  }
-                  disabled={isCreatingCallSession || isLoadingLastSessions}
-                >
-                  <SelectTrigger
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
-                    className="bg-white text-black min-w-[120px] w-full"
-                  >
-                    <SelectValue placeholder="Language..." />
-                  </SelectTrigger>
-                  <SelectContent
-                    onMouseEnter={onMouseEnter}
-                    onMouseLeave={onMouseLeave}
-                  >
-                    {Object.values(TranscriptionLanguage).map((lang) => (
-                      <SelectItem key={lang} value={lang}>
-                        {transcriptionLanguageMap[lang]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <CallScriptSelector
-                selectedScriptId={selectedScriptId}
-                onScriptChange={setSelectedScriptId}
-                disabled={isCreatingCallSession}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-              />
-
-              <div className="flex flex-row items-center gap-2 w-full justify-center">
-                <Button
-                  onClick={() => {
-                    if (!isCreatingCallSession) {
-                      createCallSession({
-                        trial: !hasActiveSubscription,
-                        clientName: clientName.trim() || undefined,
-                        language: selectedLanguage,
-                        callScriptId: selectedScriptId,
-                      });
-                    }
-                  }}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                  disabled={isCreatingCallSession}
-                >
-                  {isCreatingCallSession ? 'Creating...' : 'Create'}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowQuickStartInput(false);
-                    setClientName('');
-                    setSelectedScriptId(null);
-                  }}
-                  onMouseEnter={onMouseEnter}
-                  onMouseLeave={onMouseLeave}
-                  disabled={isCreatingCallSession}
-                >
-                  Cancel
-                </Button>
-              </div>
             </div>
           )}
           {showEnterTokenManually && userError && (
