@@ -41,6 +41,7 @@ import {
 import CallScriptSelector from '@/renderer/components/CallScriptSelector';
 import { LabelWithTooltip } from './LabelWithTooltip';
 import type { sessionAIModelEnum } from '@nextjs-types/server/db/schema.js' with { 'resolution-mode': 'import' };
+import BackgroundFilteringSelector from './BackgroundFilteringSelector';
 
 type CallSessionDialogProps = {
   open: boolean;
@@ -333,27 +334,10 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
         </div>
 
         {/* Background Filtering Section */}
-        <div className="flex flex-col gap-y-1">
-          <LabelWithTooltip tooltip="Choose the level of background noise filtering. Higher levels reduce background noise but require you to speak louder.">
-            Background Filtering Level
-          </LabelWithTooltip>
-          <Select
-            value={backgroundFiltering}
-            onValueChange={(value) => setBackgroundFiltering(value)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select filtering level..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">None</SelectItem>
-              <SelectItem value="1.5">
-                Low <span className="text-muted-foreground">(Recommended)</span>
-              </SelectItem>
-              <SelectItem value="3">Mild</SelectItem>
-              <SelectItem value="4.5">High</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <BackgroundFilteringSelector
+          selectedLevel={backgroundFiltering}
+          onLevelChange={setBackgroundFiltering}
+        />
 
         <div className="border-t border-gray-200" />
 
