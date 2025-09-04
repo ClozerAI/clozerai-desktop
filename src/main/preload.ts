@@ -65,12 +65,14 @@ const electronHandler = {
       speechmaticsApiKey: string,
       language: string,
       dictionaryEntries: DictionaryEntry[],
+      backgroundFiltering: number,
     ): Promise<Status> {
       return ipcRenderer.invoke(
         'ipc-start-audio-tap-mac',
         speechmaticsApiKey,
         language,
         dictionaryEntries,
+        backgroundFiltering,
       );
     },
     async stopAudioTap(): Promise<Status> {

@@ -255,6 +255,7 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           newCallSession.language,
           newCallSession.dictionaryEntries,
+          newCallSession.backgroundFiltering,
         );
       }
     }
@@ -303,7 +304,8 @@ export default function useSessionTranscription({
         await startAudioTapMacTranscription(
           speechmaticsApiKey!,
           callSession.language,
-          callSession.dictionaryEntries || [],
+          callSession.dictionaryEntries,
+          callSession.backgroundFiltering,
         );
       }
 

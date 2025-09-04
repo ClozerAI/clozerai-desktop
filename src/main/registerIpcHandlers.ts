@@ -33,7 +33,13 @@ export default function registerIpcHandlers(params: {
   // Request-response handlers
   ipcMain.handle(
     'ipc-start-audio-tap-mac',
-    async (_event, speechmaticsApiKey, language, dictionaryEntries) => {
+    async (
+      _event,
+      speechmaticsApiKey,
+      language,
+      dictionaryEntries,
+      backgroundFiltering,
+    ) => {
       // Always cleanup any existing instance first to prevent conflicts
       if (audioTapInstance) {
         log.info(
@@ -53,6 +59,7 @@ export default function registerIpcHandlers(params: {
           speechmaticsApiKey,
           language,
           dictionaryEntries,
+          backgroundFiltering,
           onPartial: (partial: string) => {
             getMainWindow()?.webContents.send(
               'ipc-audio-tap-partial-transcript',
