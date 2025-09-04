@@ -265,6 +265,7 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           newCallSession.language,
           newCallSession.dictionaryEntries,
+          newCallSession.backgroundFiltering,
         );
       }
     }
@@ -274,6 +275,7 @@ export default function useSessionTranscription({
         speechmaticsApiKey!,
         newCallSession.language,
         newCallSession.dictionaryEntries,
+        newCallSession.backgroundFiltering,
       );
     }
 
@@ -309,7 +311,8 @@ export default function useSessionTranscription({
         await startAudioTapWindows(
           speechmaticsApiKey!,
           callSession.language,
-          callSession.dictionaryEntries || [],
+          callSession.dictionaryEntries,
+          callSession.backgroundFiltering,
         );
       }
     } catch (error) {
@@ -342,7 +345,8 @@ export default function useSessionTranscription({
       await startMicrophoneTranscription(
         speechmaticsApiKey!,
         callSession.language,
-        callSession.dictionaryEntries || [],
+        callSession.dictionaryEntries,
+        callSession.backgroundFiltering,
       );
     } finally {
       setStartingMicrophoneTranscription(false);

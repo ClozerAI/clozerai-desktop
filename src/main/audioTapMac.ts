@@ -13,6 +13,7 @@ interface AudioTapConfig {
   speechmaticsApiKey: string;
   language: string;
   dictionaryEntries: DictionaryEntry[];
+  backgroundFiltering: number;
   onPartial?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: Error) => void;
@@ -66,6 +67,7 @@ export const startAudioTapMac: StartAudioTap = async ({
   speechmaticsApiKey,
   language,
   dictionaryEntries,
+  backgroundFiltering,
   onPartial,
   onFinal,
   onError,
@@ -370,7 +372,7 @@ export const startAudioTapMac: StartAudioTap = async ({
                 max_delay: 1,
                 domain,
                 audio_filtering_config: {
-                  volume_threshold: 6,
+                  volume_threshold: backgroundFiltering,
                 },
                 additional_vocab: dictionaryEntries.map((entry) => ({
                   content: entry.word,

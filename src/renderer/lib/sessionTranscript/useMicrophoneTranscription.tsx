@@ -45,6 +45,7 @@ export const initializeSpeechmaticsSession = async (
   onPartialData: (partialTranscript: string) => void,
   onError: (error: any) => void,
   dictionaryEntries: DictionaryEntry[],
+  backgroundFiltering: number,
 ): Promise<RealtimeClient> => {
   const realtimeClient = new RealtimeClient();
 
@@ -74,7 +75,7 @@ export const initializeSpeechmaticsSession = async (
       max_delay: 1,
       domain,
       audio_filtering_config: {
-        volume_threshold: 6,
+        volume_threshold: backgroundFiltering,
       },
       additional_vocab: dictionaryEntries.map((entry) => ({
         content: entry.word,
@@ -104,6 +105,7 @@ export default function useMicrophoneTranscription(
   const currentApiKeyRef = useRef<string | null>(null);
   const currentLanguageRef = useRef<string | null>(null);
   const currentDictionaryEntriesRef = useRef<DictionaryEntry[] | null>(null);
+  const currentBackgroundFilteringRef = useRef<number | null>(null);
 
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -165,7 +167,8 @@ export default function useMicrophoneTranscription(
       if (
         currentApiKeyRef.current &&
         currentLanguageRef.current !== null &&
-        currentDictionaryEntriesRef.current !== null
+        currentDictionaryEntriesRef.current !== null &&
+        currentBackgroundFilteringRef.current !== null
       ) {
         try {
           const client = await initializeSpeechmaticsSession(
@@ -178,6 +181,7 @@ export default function useMicrophoneTranscription(
               toast.error('Speechmatics session error:', error);
             },
             currentDictionaryEntriesRef.current,
+            currentBackgroundFilteringRef.current,
           );
           realtimeClientRef.current = client;
         } catch (error) {
@@ -237,12 +241,14 @@ export default function useMicrophoneTranscription(
     apiKey: string,
     language: string,
     dictionaryEntries: DictionaryEntry[],
+    backgroundFiltering: number,
   ): Promise<void> => {
     try {
       // Store the credentials for potential reconnection
       currentApiKeyRef.current = apiKey;
       currentLanguageRef.current = language;
       currentDictionaryEntriesRef.current = dictionaryEntries;
+      currentBackgroundFilteringRef.current = backgroundFiltering;
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -279,6 +285,7 @@ export default function useMicrophoneTranscription(
           toast.error('Speechmatics session error:', error);
         },
         dictionaryEntries,
+        backgroundFiltering,
       );
       realtimeClientRef.current = client;
 
@@ -302,7 +309,8 @@ export default function useMicrophoneTranscription(
   const switchApiKey = async (
     newApiKey: string,
     language: string,
-    dictionaryEntries: DictionaryEntry[] = [],
+    dictionaryEntries: DictionaryEntry[],
+    backgroundFiltering: number,
   ): Promise<void> => {
     try {
       if (!realtimeClientRef.current || !isRecording) {
@@ -328,6 +336,7 @@ export default function useMicrophoneTranscription(
           toast.error('Speechmatics session error:', error);
         },
         dictionaryEntries,
+        backgroundFiltering,
       );
       realtimeClientRef.current = client;
     } catch (error) {
