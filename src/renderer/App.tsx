@@ -1244,6 +1244,7 @@ export default function App() {
                     onMouseEnter={onMouseEnter}
                     onMouseLeave={onMouseLeave}
                     isTrial={!hasActiveSubscription}
+                    nextTrialSessionAllowedAt={user?.nextTrialSessionAllowedAt}
                   />
                 </>
               )}

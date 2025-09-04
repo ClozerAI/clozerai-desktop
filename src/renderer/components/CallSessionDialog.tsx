@@ -45,9 +45,8 @@ import type { sessionAIModelEnum } from '@nextjs-types/server/db/schema.js' with
 type CallSessionDialogProps = {
   open: boolean;
   setOpen: (open: boolean) => void;
-  isTrial?: boolean;
-  nextTrialSessionAllowedAt?: Date;
-  callSession?: never;
+  isTrial: boolean;
+  nextTrialSessionAllowedAt: Date;
   onCreated: (id: string) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -89,6 +88,10 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
   const createMutation = api.callSession.create.useMutation({
     onSuccess: () => {
       utils.callSession.getMany.refetch();
+      utils.user.getUserProfile.refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
 
@@ -140,9 +143,11 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
     return () => clearInterval(interval);
   }, [props.isTrial]);
 
-  const trialSessionAllowed = props.isTrial
-    ? props.nextTrialSessionAllowedAt && props.nextTrialSessionAllowedAt < now
-    : true;
+  const trialSessionAllowed =
+    props.isTrial && props.nextTrialSessionAllowedAt
+      ? props.nextTrialSessionAllowedAt < now
+      : true;
+
   const timeLeft = props.nextTrialSessionAllowedAt
     ? props.nextTrialSessionAllowedAt.getTime() - now.getTime()
     : 0;
@@ -198,10 +203,15 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
       <>
         <DialogHeader>
           <DialogTitle>
-            {props.isTrial ? '⏰ Trial Call (15 min)' : 'Call'}
+            {props.isTrial ? '⏰ Trial Call (10 min)' : 'Call'}
           </DialogTitle>
           <DialogDescription>
-            Configure your call session settings below.
+            Configure your call session settings below. This is a 10 minute
+            trial session. The timer will not start until you connect your
+            screen sharing.
+            <br />
+            You won't be able to create another trial session for 11 minutes
+            after this one ends.
           </DialogDescription>
         </DialogHeader>
 
@@ -333,11 +343,11 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="0">None</SelectItem>
-              <SelectItem value="3">
+              <SelectItem value="1.5">
                 Low <span className="text-muted-foreground">(Recommended)</span>
               </SelectItem>
-              <SelectItem value="6">Mild</SelectItem>
-              <SelectItem value="9">High</SelectItem>
+              <SelectItem value="3">Mild</SelectItem>
+              <SelectItem value="4.5">High</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -356,21 +366,6 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
             />
           </div>
         </div>
-
-        {/* Trial Session Info */}
-        {props.isTrial && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <div className="text-sm text-amber-800">
-              <strong>⏰ Trial Session Info:</strong>
-              <br />
-              This is a 10 minute trial session. The timer will not start until
-              you connect your screen sharing.
-              <br />
-              You won't be able to create another trial session for 11 minutes
-              after this one ends.
-            </div>
-          </div>
-        )}
       </>
     );
   }
