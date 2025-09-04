@@ -80,7 +80,9 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
       setLanguage(callSession.data[0].language as TranscriptionLanguage);
       setAiModel(callSession.data[0].aiModel);
       setSaveTranscription(callSession.data[0].saveTranscription);
-      setBackgroundFiltering(callSession.data[0].backgroundFiltering);
+      setBackgroundFiltering(
+        callSession.data[0].backgroundFiltering.toString(),
+      );
     }
   }, [callSession]);
 
@@ -110,7 +112,8 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
         lastSessionSaveTranscription ?? DEFAULT_SAVE_TRANSCRIPTION,
       callScriptId: lastSessionCallScriptId ?? null,
       backgroundFiltering:
-        lastSessionBackgroundFiltering ?? DEFAULT_BACKGROUND_FILTERING,
+        lastSessionBackgroundFiltering?.toString() ??
+        DEFAULT_BACKGROUND_FILTERING.toString(),
     };
   };
 
@@ -193,7 +196,7 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
       saveTranscription,
       aiModel,
       callScriptId,
-      backgroundFiltering,
+      backgroundFiltering: Number(backgroundFiltering),
     });
   }
 
@@ -335,8 +338,8 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
             Background Filtering Level
           </LabelWithTooltip>
           <Select
-            value={backgroundFiltering.toString()}
-            onValueChange={(value) => setBackgroundFiltering(parseInt(value))}
+            value={backgroundFiltering}
+            onValueChange={(value) => setBackgroundFiltering(value)}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select filtering level..." />
