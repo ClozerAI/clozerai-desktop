@@ -42,6 +42,8 @@ import CallScriptSelector from '@/renderer/components/CallScriptSelector';
 import { LabelWithTooltip } from './LabelWithTooltip';
 import type { sessionAIModelEnum } from '@nextjs-types/server/db/schema.js' with { 'resolution-mode': 'import' };
 import BackgroundFilteringSelector from './BackgroundFilteringSelector';
+import LanguageSelector from './LanguageSelector';
+import AIModelSelector from './AIModelSelector';
 
 type CallSessionDialogProps = {
   open: boolean;
@@ -253,36 +255,13 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
 
         <div className="border-t border-gray-200" />
 
-        {/* Language & AI Settings Section */}
         <div className="flex flex-col gap-y-4">
-          <div className="flex flex-col gap-y-1">
-            <LabelWithTooltip
-              icon={<Globe className="h-4 w-4" />}
-              tooltip="Select the language for transcription and AI responses."
-            >
-              Language
-            </LabelWithTooltip>
-            <Select
-              value={language}
-              onValueChange={(value) =>
-                setLanguage(value as TranscriptionLanguage)
-              }
-              disabled={isLoadingCallSession}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Language..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(TranscriptionLanguage).map((language) => (
-                  <SelectItem key={language} value={language}>
-                    {transcriptionLanguageMap[language]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <LanguageSelector
+            selectedLanguage={language}
+            onLanguageChange={setLanguage}
+            disabled={isLoadingCallSession}
+          />
 
-          {/* Call Script Section */}
           <CallScriptSelector
             selectedScriptId={callScriptId}
             onScriptChange={setCallScriptId}
@@ -290,47 +269,11 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
 
           <div className="border-t border-gray-200" />
 
-          <div className="flex flex-col gap-y-1">
-            <LabelWithTooltip
-              icon={<Bot className="h-4 w-4" />}
-              tooltip="Choose which AI model to use for generating responses. Different models may have varying capabilities and response styles."
-            >
-              AI Model
-            </LabelWithTooltip>
-            <Select
-              value={aiModel}
-              onValueChange={(value) =>
-                setAiModel(
-                  value as (typeof sessionAIModelEnum.enumValues)[number],
-                )
-              }
-              disabled={isLoadingCallSession}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select AI Model..." />
-              </SelectTrigger>
-              <SelectContent>
-                {['gpt-4.1', 'gpt-4.1-mini'].map((model) => (
-                  <SelectItem key={model} value={model}>
-                    <div className="flex flex-row items-center gap-x-2">
-                      {
-                        aiModelLogoMap[
-                          model as (typeof sessionAIModelEnum.enumValues)[number]
-                        ]
-                      }
-                      <span>
-                        {
-                          aiModelNameMap[
-                            model as (typeof sessionAIModelEnum.enumValues)[number]
-                          ]
-                        }
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AIModelSelector
+            selectedModel={aiModel}
+            onModelChange={setAiModel}
+            disabled={isLoadingCallSession}
+          />
         </div>
 
         {/* Background Filtering Section */}
