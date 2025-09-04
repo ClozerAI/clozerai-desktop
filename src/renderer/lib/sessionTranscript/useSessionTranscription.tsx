@@ -12,6 +12,7 @@ import { api, NEXTJS_API_URL, RouterOutputs } from '../trpc/react';
 import { osVersion, os } from '../useVersion';
 import useMicrophoneTranscription from './useMicrophoneTranscription';
 import { isMac, isWindows } from '@/renderer/App';
+import { TranscriptionLanguage } from '../transcriptLanguageMap';
 
 type UseSessionTranscriptionProps = {
   callSessionId: string | null;
@@ -572,6 +573,55 @@ export default function useSessionTranscription({
     };
   }, [callSession]);
 
+  // Allow switching transcription language mid-session
+  const handleSwitchTranscriptionSettings = useCallback(
+    (newLanguage: TranscriptionLanguage, newBackgroundFiltering: number) => {
+      if (!callSession?.speechmaticsApiKey) {
+        return;
+      }
+
+      if (isMac) {
+        if (audioTapMacStatus === Status.RECORDING) {
+          switchAudioTapMacApiKey(
+            callSession.speechmaticsApiKey,
+            newLanguage,
+            callSession.dictionaryEntries,
+            newBackgroundFiltering,
+          );
+        }
+      }
+
+      if (isWindows) {
+        if (isRecordingWindowsAudioTap) {
+          switchWindowsAudioTapApiKey(
+            callSession.speechmaticsApiKey,
+            newLanguage,
+            callSession.dictionaryEntries,
+            newBackgroundFiltering,
+          );
+        }
+      }
+
+      if (isRecordingMicrophone) {
+        switchMicrophoneApiKey(
+          callSession.speechmaticsApiKey,
+          newLanguage,
+          callSession.dictionaryEntries,
+          newBackgroundFiltering,
+        );
+      }
+    },
+    [
+      callSession?.speechmaticsApiKey,
+      isRecordingWindowsAudioTap,
+      audioTapMacStatus,
+      isRecordingMicrophone,
+      switchWindowsAudioTapApiKey,
+      switchAudioTapMacApiKey,
+      switchMicrophoneApiKey,
+    ],
+  );
+
   return {
     // Call session data
     callSession,
@@ -620,5 +670,8 @@ export default function useSessionTranscription({
 
     // Session reset
     handleResetSession,
+
+    // Switch transcription settings
+    handleSwitchTranscriptionSettings,
   };
 }

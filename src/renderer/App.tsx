@@ -35,6 +35,9 @@ import ChatMessage from './components/ChatMessage';
 import { api, NEXTJS_API_URL } from './lib/trpc/react';
 import { toast } from 'sonner';
 import CallSessionDialog from './components/CallSessionDialog';
+import { TranscriptionLanguage } from './lib/transcriptLanguageMap';
+import LanguageSelector from './components/LanguageSelector';
+import BackgroundFilteringSelector from './components/BackgroundFilteringSelector';
 
 export const isMac = window.electron?.platform === 'darwin';
 export const isWindows = window.electron?.platform === 'win32';
@@ -58,10 +61,9 @@ export default function App() {
   });
 
   // Fetch latest release data for Windows downloads
-  const { data: releaseData, isLoading: releaseLoading } =
-    api.user.getLatestRelease.useQuery(undefined, {
-      retry: false,
-    });
+  const { data: releaseData } = api.user.getLatestRelease.useQuery(undefined, {
+    retry: false,
+  });
 
   const loggedIn = user && !userError;
 
@@ -154,10 +156,84 @@ export default function App() {
 
     // Session reset
     handleResetSession,
+
+    // Switch transcription settings
+    handleSwitchTranscriptionSettings,
   } = useSessionTranscription({
     callSessionId,
     version: version || 'unknown',
   });
+
+  // Language selector state and mutation
+  const [selectedLanguage, setSelectedLanguage] =
+    useState<TranscriptionLanguage>();
+
+  useEffect(() => {
+    if (callSession?.language && callSession.language !== selectedLanguage) {
+      setSelectedLanguage(callSession.language as TranscriptionLanguage);
+    }
+  }, [callSession?.language]);
+
+  // Background filtering selector state
+  const [selectedBackgroundFiltering, setSelectedBackgroundFiltering] =
+    useState<string>();
+
+  useEffect(() => {
+    if (
+      callSession?.backgroundFiltering !== undefined &&
+      String(callSession.backgroundFiltering) !== selectedBackgroundFiltering
+    ) {
+      setSelectedBackgroundFiltering(String(callSession.backgroundFiltering));
+    }
+  }, [callSession?.backgroundFiltering]);
+
+  const updateMutation = api.callSession.update.useMutation({
+    onSuccess: (updated) => {
+      utils.callSession.get.setData({ id: updated.id }, updated);
+      toast.success('Settings updated');
+      handleSwitchTranscriptionSettings(
+        updated.language as TranscriptionLanguage,
+        updated.backgroundFiltering,
+      );
+    },
+    onError: (error) => {
+      if (!callSession?.id) {
+        toast.error('No call session ID');
+        return;
+      }
+
+      toast.error(error.message);
+      setSelectedLanguage(callSession.language as TranscriptionLanguage);
+      setSelectedBackgroundFiltering(
+        callSession.backgroundFiltering.toString(),
+      );
+    },
+  });
+
+  const handleLanguageChange = (newLanguage: TranscriptionLanguage) => {
+    if (!callSession?.id) {
+      toast.error('No call session ID');
+      return;
+    }
+    setSelectedLanguage(newLanguage);
+    updateMutation.mutate({
+      id: callSession.id,
+      language: newLanguage,
+    });
+  };
+
+  const handleBackgroundFilteringChange = (newLevel: string) => {
+    if (!callSession?.id) {
+      toast.error('No call session ID');
+      return;
+    }
+
+    setSelectedBackgroundFiltering(newLevel);
+    updateMutation.mutate({
+      id: callSession.id,
+      backgroundFiltering: parseFloat(newLevel),
+    });
+  };
 
   const { data: builtInPrompts, isLoading: isLoadingBuiltInPrompts } =
     api.realTimePrompts.getBuiltInPrompts.useQuery(undefined, {
@@ -560,10 +636,6 @@ export default function App() {
 
   function handleZoomOut() {
     window.electron?.ipcRenderer.sendMessage('ipc-zoom-out');
-  }
-
-  function handleZoomReset() {
-    window.electron?.ipcRenderer.sendMessage('ipc-zoom-reset');
   }
 
   function handleTogglePrivacy() {
@@ -1048,6 +1120,26 @@ export default function App() {
                   trial={callSession?.trial}
                   canExtend={hasActiveSubscription}
                 />
+              )}
+              {activatedSession && (
+                <>
+                  <LanguageSelector
+                    selectedLanguage={selectedLanguage}
+                    onLanguageChange={handleLanguageChange}
+                    disabled={updateMutation.isPending}
+                    compact
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                  />
+                  <BackgroundFilteringSelector
+                    selectedLevel={selectedBackgroundFiltering}
+                    onLevelChange={handleBackgroundFilteringChange}
+                    disabled={updateMutation.isPending}
+                    compact
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                  />
+                </>
               )}
               {activatedSession && isRecordingAudioTap ? (
                 <Tooltip>

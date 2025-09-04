@@ -280,6 +280,7 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
         <BackgroundFilteringSelector
           selectedLevel={backgroundFiltering}
           onLevelChange={setBackgroundFiltering}
+          disabled={isLoadingCallSession}
         />
 
         <div className="border-t border-gray-200" />
