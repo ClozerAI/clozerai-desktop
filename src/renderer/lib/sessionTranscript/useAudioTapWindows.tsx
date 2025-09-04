@@ -230,6 +230,11 @@ export default function useAudioTapWindows(
     backgroundFiltering: number,
   ): Promise<void> => {
     try {
+      currentApiKeyRef.current = newApiKey;
+      currentLanguageRef.current = language;
+      currentDictionaryEntriesRef.current = dictionaryEntries;
+      currentBackgroundFilteringRef.current = backgroundFiltering;
+
       if (!realtimeClientRef.current || !isRecording) {
         throw new Error('No active transcription session to switch API key');
       }
