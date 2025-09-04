@@ -85,15 +85,18 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
   }, [callSession]);
 
   // Different mutations based on mode
-  const createMutation = api.callSession.create.useMutation({
-    onSuccess: () => {
-      utils.callSession.getMany.refetch();
-      utils.user.getUserProfile.refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const { mutate: createMutation, isPending: createMutationPending } =
+    api.callSession.create.useMutation({
+      onSuccess: (data) => {
+        utils.callSession.getMany.refetch();
+        utils.user.getUserProfile.refetch();
+        setOpen(false);
+        props.onCreated(data.id);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   // Get initial values based on mode
   const getInitialValues = () => {
@@ -182,7 +185,7 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
       return;
     }
 
-    const { id } = await createMutation.mutateAsync({
+    createMutation({
       clientName,
       clientDescription,
       language,
@@ -192,9 +195,6 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
       callScriptId,
       backgroundFiltering,
     });
-
-    setOpen(false);
-    props.onCreated(id);
   }
 
   // Helper function to render form content
@@ -409,13 +409,13 @@ export default function CallSessionDialog(props: CallSessionDialogProps) {
             <Button
               type="submit"
               disabled={
-                createMutation.isPending ||
+                createMutationPending ||
                 !trialSessionAllowed ||
                 isLoadingCallSession
               }
               className="flex-1 flex-row items-center gap-1"
             >
-              {createMutation.isPending
+              {createMutationPending
                 ? 'Starting...'
                 : !trialSessionAllowed && props.isTrial
                   ? `⏰ ${millisecondsToTimeString(timeLeft)}`
