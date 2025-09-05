@@ -38,6 +38,7 @@ import CallSessionDialog from './components/CallSessionDialog';
 import { TranscriptionLanguage } from './lib/transcriptLanguageMap';
 import LanguageSelector from './components/LanguageSelector';
 import BackgroundFilteringSelector from './components/BackgroundFilteringSelector';
+import { usePrompts } from './lib/usePrompts';
 
 export const isMac = window.electron?.platform === 'darwin';
 export const isWindows = window.electron?.platform === 'win32';
@@ -164,6 +165,12 @@ export default function App() {
     version: version || 'unknown',
   });
 
+  const {
+    builtInPrompts,
+    allPrompts,
+    isLoading: isLoadingPrompts,
+  } = usePrompts();
+
   // Language selector state and mutation
   const [selectedLanguage, setSelectedLanguage] =
     useState<TranscriptionLanguage>();
@@ -234,37 +241,6 @@ export default function App() {
       backgroundFiltering: parseFloat(newLevel),
     });
   };
-
-  const { data: builtInPrompts, isLoading: isLoadingBuiltInPrompts } =
-    api.realTimePrompts.getBuiltInPrompts.useQuery(undefined, {
-      enabled: !!loggedIn,
-    });
-
-  const { data: realTimePromptsResponse, isLoading: isLoadingRealTimePrompts } =
-    api.realTimePrompts.getMany.useQuery(
-      {
-        limit: 100,
-        offset: 0,
-      },
-      {
-        enabled: !!loggedIn,
-      },
-    );
-
-  const realTimePrompts = realTimePromptsResponse?.data ?? [];
-
-  const allPrompts = [
-    ...(realTimePrompts || []).map((p) => ({
-      id: p.id,
-      title: p.title,
-      description: p.prompt,
-    })),
-    ...(builtInPrompts?.builtInPrompts || []).map((p) => ({
-      id: p.id,
-      title: p.title,
-      description: p.description,
-    })),
-  ];
 
   function onMouseEnter() {
     window.electron?.ipcRenderer.sendMessage(
@@ -1457,7 +1433,7 @@ export default function App() {
           )}
           {activatedSession && (
             <div className="flex flex-row items-center gap-2 mt-1 w-full justify-center">
-              {isLoadingBuiltInPrompts || isLoadingRealTimePrompts ? (
+              {isLoadingPrompts ? (
                 <span>Loading prompts...</span>
               ) : allPrompts && allPrompts.length > 0 ? (
                 <div className="flex flex-row flex-wrap items-center justify-center gap-2">

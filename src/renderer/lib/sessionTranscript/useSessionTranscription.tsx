@@ -13,6 +13,7 @@ import { osVersion, os } from '../useVersion';
 import useMicrophoneTranscription from './useMicrophoneTranscription';
 import { isMac, isWindows } from '@/renderer/App';
 import { TranscriptionLanguage } from '../transcriptLanguageMap';
+import { usePrompts } from '../usePrompts';
 
 type UseSessionTranscriptionProps = {
   callSessionId: string | null;
@@ -153,6 +154,7 @@ export default function useSessionTranscription({
 
   const { mutate: saveAiAnswer } = api.aiAnswers.save.useMutation();
   const { mutate: pingSession } = api.callSession.ping.useMutation();
+  const { allPrompts } = usePrompts();
 
   // Chat functionality
   const { messages, append, stop, setMessages, status } = useChat({
@@ -201,6 +203,12 @@ export default function useSessionTranscription({
         content: message.content,
         role: message.role,
         createdAt: message.createdAt || new Date(),
+        promptTitle:
+          // @ts-ignore - TODO: fix this
+          allPrompts?.find((p) => p.id === message.data?.promptId)?.title ||
+          // @ts-ignore - TODO: fix this
+          message.data?.promptId ||
+          undefined,
       });
     }
   }
