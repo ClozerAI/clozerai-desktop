@@ -79,7 +79,6 @@ export default function useAudioTapMac(
     apiKey: string,
     language: string,
     dictionaryEntries: DictionaryEntry[],
-    backgroundFiltering: number,
   ) => {
     await ensureCleanup();
 
@@ -90,7 +89,6 @@ export default function useAudioTapMac(
         apiKey,
         language,
         dictionaryEntries,
-        backgroundFiltering,
       );
 
       setStatus(response);
@@ -145,18 +143,12 @@ export default function useAudioTapMac(
     newApiKey: string,
     language: string,
     dictionaryEntries: DictionaryEntry[],
-    backgroundFiltering: number,
   ) => {
     try {
       console.log('Switching Speechmatics API key...');
       await stopRecording();
       console.log('Previous audio tap stopped, starting with new API key...');
-      await startTranscription(
-        newApiKey,
-        language,
-        dictionaryEntries,
-        backgroundFiltering,
-      );
+      await startTranscription(newApiKey, language, dictionaryEntries);
       console.log('Audio tap started with new API key');
     } catch (error) {
       setStatus(Status.IDLE);

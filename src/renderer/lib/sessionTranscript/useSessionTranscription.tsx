@@ -256,7 +256,6 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           newCallSession.language,
           newCallSession.dictionaryEntries,
-          newCallSession.backgroundFiltering,
         );
       }
     }
@@ -267,7 +266,6 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           newCallSession.language,
           newCallSession.dictionaryEntries,
-          newCallSession.backgroundFiltering,
         );
       }
     }
@@ -306,7 +304,6 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           callSession.language,
           callSession.dictionaryEntries,
-          callSession.backgroundFiltering,
         );
       }
 
@@ -315,7 +312,6 @@ export default function useSessionTranscription({
           speechmaticsApiKey!,
           callSession.language,
           callSession.dictionaryEntries,
-          callSession.backgroundFiltering,
         );
       }
     } catch (error) {
@@ -586,7 +582,6 @@ export default function useSessionTranscription({
             callSession.speechmaticsApiKey,
             newLanguage,
             callSession.dictionaryEntries,
-            newBackgroundFiltering,
           );
         }
       }
@@ -597,7 +592,6 @@ export default function useSessionTranscription({
             callSession.speechmaticsApiKey,
             newLanguage,
             callSession.dictionaryEntries,
-            newBackgroundFiltering,
           );
         }
       }

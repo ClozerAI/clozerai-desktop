@@ -13,7 +13,6 @@ interface AudioTapConfig {
   speechmaticsApiKey: string;
   language: string;
   dictionaryEntries: DictionaryEntry[];
-  backgroundFiltering: number;
   onPartial?: (text: string) => void;
   onFinal?: (text: string) => void;
   onError?: (error: Error) => void;
