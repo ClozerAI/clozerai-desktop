@@ -174,7 +174,7 @@ const createWindow = async () => {
   });
 
   // Hardening
-  mainWindow.setContentProtection(true);
+  mainWindow.setContentProtection(false);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setResizable(false);
 

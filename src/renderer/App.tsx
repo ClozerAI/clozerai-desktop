@@ -426,13 +426,11 @@ export default function App() {
   }, [refetchUser]);
 
   // Add state for tracking logo clicks and content protection
-  const [logoClickCount, setLogoClickCount] = useState(0);
   const [contentProtectionDisabled, setContentProtectionDisabled] =
     useState(false);
-  const logoClickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Add state for privacy mode (default to private)
-  const [isPrivate, setIsPrivate] = useState(true);
+  // Add state for privacy mode (default to visible)
+  const [isPrivate, setIsPrivate] = useState(false);
 
   // Add update state
   const [updateStatus, setUpdateStatus] = useState<
@@ -460,10 +458,10 @@ export default function App() {
     };
   }, [handleClearAIAnswer]);
 
-  // Initialize privacy mode to private on mount
+  // Initialize privacy mode to visible on mount
   useEffect(() => {
     if (window.electron?.ipcRenderer) {
-      window.electron.ipcRenderer.sendMessage('ipc-toggle-privacy', true);
+      window.electron.ipcRenderer.sendMessage('ipc-toggle-privacy', false);
     }
   }, []);
 
