@@ -67,7 +67,6 @@ export const startAudioTapMac: StartAudioTap = async ({
   speechmaticsApiKey,
   language,
   dictionaryEntries,
-  backgroundFiltering,
   onPartial,
   onFinal,
   onError,
@@ -371,9 +370,6 @@ export const startAudioTapMac: StartAudioTap = async ({
                 enable_partials: true,
                 max_delay: 1,
                 domain,
-                audio_filtering_config: {
-                  volume_threshold: backgroundFiltering,
-                },
                 additional_vocab: dictionaryEntries.map((entry) => ({
                   content: entry.word,
                   sounds_like: entry.pronunciation

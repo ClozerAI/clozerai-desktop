@@ -19,7 +19,6 @@ export default function useAudioTapWindows(
   const currentApiKeyRef = useRef<string | null>(null);
   const currentLanguageRef = useRef<string | null>(null);
   const currentDictionaryEntriesRef = useRef<DictionaryEntry[] | null>(null);
-  const currentBackgroundFilteringRef = useRef<number | null>(null);
 
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -81,8 +80,7 @@ export default function useAudioTapWindows(
       if (
         currentApiKeyRef.current &&
         currentLanguageRef.current !== null &&
-        currentDictionaryEntriesRef.current !== null &&
-        currentBackgroundFilteringRef.current !== null
+        currentDictionaryEntriesRef.current !== null
       ) {
         try {
           const client = await initializeSpeechmaticsSession(
@@ -95,7 +93,6 @@ export default function useAudioTapWindows(
               toast.error('Speechmatics session error:', error);
             },
             currentDictionaryEntriesRef.current,
-            currentBackgroundFilteringRef.current,
           );
           realtimeClientRef.current = client;
         } catch (error) {
@@ -153,13 +150,11 @@ export default function useAudioTapWindows(
     apiKey: string,
     language: string,
     dictionaryEntries: DictionaryEntry[],
-    backgroundFiltering: number,
   ): Promise<void> => {
     try {
       currentApiKeyRef.current = apiKey;
       currentLanguageRef.current = language;
       currentDictionaryEntriesRef.current = dictionaryEntries;
-      currentBackgroundFilteringRef.current = backgroundFiltering;
 
       // Request system audio via display media (loopback). Video track is minimized.
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -202,7 +197,6 @@ export default function useAudioTapWindows(
           toast.error('Speechmatics session error:', error);
         },
         dictionaryEntries,
-        backgroundFiltering,
       );
       realtimeClientRef.current = client;
 
@@ -227,13 +221,11 @@ export default function useAudioTapWindows(
     newApiKey: string,
     language: string,
     dictionaryEntries: DictionaryEntry[],
-    backgroundFiltering: number,
   ): Promise<void> => {
     try {
       currentApiKeyRef.current = newApiKey;
       currentLanguageRef.current = language;
       currentDictionaryEntriesRef.current = dictionaryEntries;
-      currentBackgroundFilteringRef.current = backgroundFiltering;
 
       if (!realtimeClientRef.current || !isRecording) {
         throw new Error('No active transcription session to switch API key');
@@ -257,7 +249,6 @@ export default function useAudioTapWindows(
           toast.error('Speechmatics session error:', error);
         },
         dictionaryEntries,
-        backgroundFiltering,
       );
       realtimeClientRef.current = client;
     } catch (error) {

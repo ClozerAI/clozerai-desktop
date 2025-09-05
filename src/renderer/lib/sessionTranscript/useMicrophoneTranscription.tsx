@@ -45,7 +45,7 @@ export const initializeSpeechmaticsSession = async (
   onPartialData: (partialTranscript: string) => void,
   onError: (error: any) => void,
   dictionaryEntries: DictionaryEntry[],
-  backgroundFiltering: number,
+  backgroundFiltering?: number,
 ): Promise<RealtimeClient> => {
   const realtimeClient = new RealtimeClient();
 
