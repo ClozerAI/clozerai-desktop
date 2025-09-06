@@ -55,7 +55,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       ),
       // Table support
       table: ({ children }) => (
-        <div className="overflow-x-auto">
+        <div>
           <table className="min-w-full border-collapse border border-gray-300">
             {children}
           </table>
